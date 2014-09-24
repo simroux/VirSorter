@@ -1,6 +1,8 @@
 #!/usr/bin/perl
 use strict;
 use Bio::Seq;
+use File::Spec::Functions;
+use File::Path 'mkpath';
 # Script to generate a new db with putative new clusters
 # Argument 0 : Fasta file of the new phages
 
