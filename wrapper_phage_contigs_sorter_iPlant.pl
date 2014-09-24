@@ -210,7 +210,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
             ## Adding custom sequences to the database if required by the user
             if ( $custom_phage ne "" ) {
                 my $script_custom_phage = catfile($script_dir,"Step_first_add_custom_phage_sequence.pl");
-                $out =`$script_custom_phage $custom_phage $dir_Phage_genes $dir_revision/db >> $log_out 2>> $log_err`;
+                $out =`$script_custom_phage $custom_phage $dir_Phage_genes/ $dir_revision/db >> $log_out 2>> $log_err`;
                 print "Adding custom phage to the database : $out\n";
             }
             # should replace Pool_cluster / Pool_unclustered and
