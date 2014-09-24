@@ -330,7 +330,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
 
 # Last step -> extract all sequences as fasta files and gb
 my $script_generate_output = catfile($script_dir,"Step_5_get_phage_fasta-gb.pl");
-my $cmd_step_5 = "$script_generate_output $wdir >> $log_out 2>> $log_err";
+my $cmd_step_5 = "$script_generate_output $code_dataset >> $log_out 2>> $log_err";
 print "\nStep 5 : $cmd_step_5\n";
 
 `echo $cmd_step_5 >> $log_out 2>> $log_err`;
