@@ -80,6 +80,7 @@ my %check_contig_new;
 open(SUM,"<$new_summary") || die ("pblm opening file $new_summary\n");
 while (<SUM>){
 	chomp($_);
+	$_=~s/,/;/g;
 	my @tab=split("\t",$_);
 	if ($tab[4] eq "complete_phage"){
 #    0   /       1        /    2       /  3  /     4          /    5      /      6        /     7        /     8       /       9        /     10   /      11     /    
@@ -91,6 +92,11 @@ while (<SUM>){
 			$check_contig_new{$tab[0]}=1;
 		}
 		elsif ($tab[5]==2){$class=2;}
+ 		for(my $i=5;$i<=$#tab;$i++){
+ 			if ($tab[$i]=~/(.*);$/){
+ 				$tab[$i]=$1;
+ 			}
+ 		}
 # 		print "$_ => tag $class\n";
 		$infos{$class}{$tab[0]}{"nb_gene"}=$tab[1];
 		$infos{$class}{$tab[0]}{"category"}=$tab[5];
@@ -126,6 +132,11 @@ while (<SUM>){
 				}
 			}
 		}
+ 		for(my $i=5;$i<=$#tab;$i++){
+ 			if ($tab[$i]=~/(.*);$/){
+ 				$tab[$i]=$1;
+ 			}
+ 		}
 # 		print "Prophage $class / $tab[0] - $tab[2]\n";
 		$infos{$class}{$tab[0]}{$tab[2]}{"nb_gene_contig"}=$tab[1];
 		$infos{$class}{$tab[0]}{$tab[2]}{"nb_gene"}=$tab[3];

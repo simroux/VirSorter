@@ -2,8 +2,10 @@
 
 =head1 USAGE 
 
-  ./myscript -d foo --fna FNA file ...
-
+  ./wrapper_phage_contigs_sorter_iPlant.pl -d Code_dataset --fna Fasta file of contigs --db 1 --wdir /path/to/working_directory
+  Database codes : 1 for RefseqABVir only, 2 for RefseqABVir + Viromes
+  An additional set of reference sequences can be added to the database as a fasta file with the argument cp (--cp /path/to/fasta_file)
+  
 =cut
 
 use strict;
@@ -15,53 +17,38 @@ use Getopt::Long 'GetOptions';
 use Pod::Usage;
 use Cwd 'cwd';
 
-#my $help              = '';
-#my $code_dataset      = $0;
-#my $original_fna_file = '';
-#my $choice_database   = '';
-#my $wdir              = cwd();
-#
-#GetOptions(
-#    'd|dataset' => \$code_dataset,
-#    'fna'       => \$original_fna_file,
-#    'db'        => \$choice_database,
-#    'wdir'      => \$wdir,
-#    'h|help'    => \$help,
-#);
-#
-#if ($help) {
-#    pod2usage();
-#}
+my $help              = '';
+my $code_dataset      = $0;
+my $original_fna_file = '';
+my $choice_database   = '';
+my $custom_phage      = '';
+my $wdir              = cwd();
 
-# Wrapper for detection of viral contigs
-# Argument 0 : Fasta file of contigs
-if (   ( $ARGV[0] eq "-h" )
-    || ( $ARGV[0] eq "--h" )
-    || ( $ARGV[0] eq "-help" )
-    || ( $ARGV[0] eq "--help" )
-    || ( !defined( $ARGV[1] ) ) )
-{
-    print "# Wrapper for detection of viral contigs
-# Argument 0 : code dataset
-# Argument 1 : Fasta file of contigs
-# Argument 2 : choice between Refseqdb (1) or Viromedb (2)
-# Argument 3 : Custom phage sequence (if wanted)\n";
-    die "\n";
+GetOptions(
+   'd|dataset' => \$code_dataset,
+   'fna'       => \$original_fna_file,
+   'db'        => \$choice_database,
+   'wdir'      => \$wdir,
+   'cp'        => \$custom_phage,
+   'h|help'    => \$help,
+);
+
+if ($help || $original_fna_file eq '' || $choice_database eq '') {
+   pod2usage();
 }
 
-# Need 3 databases
-# PCs from Refseq (phages ? more ?)
-# PCs from Viromes (clean ones)
+# Need 2 databases
+# PCs from Refseq (phages) or PCs from Refseq+Viromes
 # PFAM (26.0?)
 
 my $n_cpus = 8;
 
-my $code_dataset      = $ARGV[0];
-my $original_fna_file = $ARGV[1];
-my $choice_database   = $ARGV[2];
-my $wdir              = $ARGV[3];
-my $custom_phage      = "";
-if ( defined( $ARGV[4] ) ) { $custom_phage = $ARGV[4]; }
+# my $code_dataset      = $ARGV[0];
+# my $original_fna_file = $ARGV[1];
+# my $choice_database   = $ARGV[2];
+# my $wdir              = $ARGV[3];
+# my $custom_phage      = "";
+# if ( defined( $ARGV[4] ) ) { $custom_phage = $ARGV[4]; }
 print "#%#%#%#%#%# Processing $code_dataset....\n";
 my $microbial_base_needed = 0;
 ## replace this directory with the iPlant dir
@@ -94,7 +81,7 @@ my $out = "";
 if (!-d 'log') {
     mkpath('log');
 }
-my $out = `rm -r log/* *.csv`;
+$out = `rm -r log/* *.csv`;
 print "rm -r log* *.csv => $out\n";
 
 # cp fasta file in the wdir
@@ -184,7 +171,6 @@ my $out_hmmsearch = "Contigs_prots_vs_Phage_Gene_Catalog.tab";
 my $out_hmmsearch_bis        = "Contigs_prots_vs_Phage_Gene_Catalog.out";
 my $out_blast_unclustered    = "Contigs_prots_vs_Phage_Gene_unclustered.tab";
 my $out_file_affi            = $code_dataset . "_affi-contigs.csv";
-my $out_file_affi            = $code_dataset . "_affi-contigs.csv";
 my $out_file_phage_fragments = $code_dataset . "_phage-signal.csv";
 my $global_out_file          = $code_dataset . "_global-phage-signal.csv";
 my $new_prots_to_cluster     = $code_dataset . "_new_prot_list.csv";
@@ -192,7 +178,7 @@ my $new_prots_to_cluster     = $code_dataset . "_new_prot_list.csv";
 # Constant scripts
 my $script_merge_annot = $script_dir . "Step_2_merge_contigs_annotation.pl";
 my $cmd_merge =
-"$script_merge_annot $predict_file $out_hmmsearch $out_blast_unclustered $out_hmmsearch_pfama $out_hmmsearch_pfamb $ref_phage_clusters $out_file_affi >> $log_out 2>> $log_err";
+"$script_merge_annot $predict_file $out_hmmsearch $out_blast_unclustered $out_hmmsearch_pfama $out_hmmsearch_pfamb $ref_phage_clusters  >> $log_out 2>> $log_err";
 
 my $script_detect = $script_dir . "Step_3_highlight_phage_signal.pl";
 my $cmd_detect =
@@ -207,7 +193,7 @@ my $cmd_summary =
 my $r_n = -1;
 # Si on a des nouvelles prots a clusteriser ou si on est dans la premiere
 # revision
-while ( -e $new_prots_to_cluster || $r_n == -1 ) {
+while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
     $r_n++;    # New revision of the prediction
     my $dir_revision = "r_" . $r_n;
     print "### Revision $r_n\n";
