@@ -169,6 +169,7 @@ my $new_prots_to_cluster     = $code_dataset . "_new_prot_list.csv";
 my $script_merge_annot = catfile($script_dir,"Step_2_merge_contigs_annotation.pl");
 my $cmd_merge =
 "$script_merge_annot $predict_file $out_hmmsearch $out_blast_unclustered $out_hmmsearch_pfama $out_hmmsearch_pfamb $ref_phage_clusters $out_file_affi >> $log_out 2>> $log_err";
+# my $cmd_merge = "$script_merge_annot -m $predict_file -hmm_pc $out_hmmsearch -blast_pc $out_blast_unclustered -hmm_pfa $out_hmmsearch_pfama -hmm_pfb $out_hmmsearch_pfamb -ref_pc $ref_phage_clusters -out_f $out_file_affi >> $log_out 2>> $log_err";
 
 my $script_detect = catfile($script_dir,"Step_3_highlight_phage_signal.pl");
 my $cmd_detect =
@@ -194,7 +195,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         mkpath($dir_revision);
         print "Out : $out\n";
         ## Clustering of the new prots with the unclustered
-        my $script_new_cluster = $script_dir . "Step_0_make_new_clusters.pl";
+        my $script_new_cluster = catfile($script_dir,"Step_0_make_new_clusters.pl");
         my $previous_hmm_cluster;
         my $previous_fasta_unclustered;
 
