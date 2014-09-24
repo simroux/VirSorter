@@ -5,6 +5,8 @@ use Bio::Seq;
 use Bio::SeqFeature::Generic;
 use Bio::Location::Simple;
 use Bio::Location::Split;
+use File::Spec::Functions;
+use File::Path 'mkpath';
 # Script to get fasta file from VirSorter results
 # Argument 0 : code of the run
 if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[0])))
@@ -16,21 +18,23 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 
 
 my $code=$ARGV[0];
+my $dir_out="Predicted_viral_sequences";
+mkpath($dir_out);
 # We decal each zone by 50 nt before and beyond
 my $decal=50;
 print "Code $code\n";
-my $out_file_1=$code."_cat-1.fasta";
-my $out_file_2=$code."_cat-2.fasta";
-my $out_file_3=$code."_cat-3.fasta";
-my $out_file_p1=$code."_prophages_cat-4.fasta";
-my $out_file_p2=$code."_prophages_cat-5.fasta";
-my $out_file_p3=$code."_prophages_cat-6.fasta";
-my $gb_file_1=$code."_cat-1.gb";
-my $gb_file_2=$code."_cat-2.gb";
-my $gb_file_3=$code."_cat-3.gb";
-my $gb_file_p1=$code."_prophages_cat-4.gb";
-my $gb_file_p2=$code."_prophages_cat-5.gb";
-my $gb_file_p3=$code."_prophages_cat-6.gb";
+my $out_file_1=catfile($dir_out, $code ."/_cat-1.fasta");
+my $out_file_2=catfile($dir_out, $code."_cat-2.fasta");
+my $out_file_3=catfile($dir_out, $code."_cat-3.fasta");
+my $out_file_p1=catfile($dir_out, $code."_prophages_cat-4.fasta");
+my $out_file_p2=catfile($dir_out, $code."_prophages_cat-5.fasta");
+my $out_file_p3=catfile($dir_out, $code."_prophages_cat-6.fasta");
+my $gb_file_1=catfile($dir_out, $code."_cat-1.gb");
+my $gb_file_2=catfile($dir_out, $code."_cat-2.gb");
+my $gb_file_3=catfile($dir_out, $code."_cat-3.gb");
+my $gb_file_p1=catfile($dir_out, $code."_prophages_cat-4.gb");
+my $gb_file_p2=catfile($dir_out, $code."_prophages_cat-5.gb");
+my $gb_file_p3=catfile($dir_out, $code."_prophages_cat-6.gb");
 print "The sequences will be put in $out_file_1 / $out_file_2 / $out_file_3 / $out_file_p1 / $out_file_p2 / $out_file_p3\n";
 my $summary=$code."_global-phage-signal.csv";
 my $last_affi=$code."_phage-signal.csv";
