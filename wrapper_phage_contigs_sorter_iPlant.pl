@@ -57,13 +57,14 @@ my $microbial_base_needed = 0;
 my $log_out = "log_out";
 my $log_err = "log_err";
 
-my $path_to_mga =catfile($virsorter_dir,"Tools/Metagene_annotator/mga_linux_ia64");
-my $path_hmmsearch =catfile($virsorter_dir,"Tools/hmmer-3.0-linux-intel-x86_64/binaries/hmmsearch");
+my $path_to_mga = catfile($virsorter_dir,"Tools/Metagene_annotator/mga_linux_ia64");
+my $path_hmmsearch = catfile($virsorter_dir,"Tools/hmmer-3.0-linux-intel-x86_64/binaries/hmmsearch");
 my $path_blastall    = "/usr/bin/blastall";
 my $path_to_formatdb = "/usr/bin/formatdb";
 my $script_dir       = catdir($virsorter_dir,"Scripts/");
 my $dir_Phage_genes  = catdir($virsorter_dir,"Database/Phage_gene_catalog/");
 my $ref_phage_clusters = catfile($virsorter_dir,"Database/Phage_gene_catalog/Phage_Clusters_current.tab");
+my $readme_file = catfile($virsorter_dir,"VirSorter_Reamde.txt");
 
 if ( $choice_database == 2 ) {
     $dir_Phage_genes = catdir($virsorter_dir,"Database/Phage_gene_catalog_plus_viromes/");
@@ -327,7 +328,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
     print "\t$out\n";
 }
 
-# Last step -> extract all sequences -> fasta / Gb ????
+# Last step -> extract all sequences as fasta files and gb
 my $script_generate_output = catfile($script_dir,"Step_5_get_phage_fasta-gb.pl");
 my $cmd_step_5 = "$script_generate_output $wdir >> $log_out 2>> $log_err";
 print "\nStep 5 : $cmd_step_5\n";
@@ -336,3 +337,32 @@ print "\nStep 5 : $cmd_step_5\n";
 
 $out = `$cmd_step_5`;
 print "\t$out\n";
+
+
+# Plus clean the output directory
+print "Cleaning the output directory\n";
+my $db_revision_0="r_0/db";
+$out=`rm -r $db_revision_0`;
+print "rm -r $db_revision_0 : $out\n";
+# We put all results from Hmmsearch and BLAST files in a separate directory
+my $store_database_comparison="Tab_files";
+mkpath($store_database_comparison);
+`mv $out_hmmsearch $store_database_comparison/`;
+# `mv $out_hmmsearch_bis $store_database_comparison/`;
+`mv $out_blast_unclustered $store_database_comparison/`;
+`mv $out_hmmsearch_pfama $store_database_comparison/`;
+`mv $out_hmmsearch_pfama_bis $store_database_comparison/`;
+`mv $out_hmmsearch_pfamb $store_database_comparison/`;
+`mv $out_hmmsearch_pfamb_bis $store_database_comparison/`;
+`mv error.log logs/`;
+`mv formatdb.log logs/`;
+`mv log_err logs/Virsorter_error_log`;
+`mv log_out logs/Virsorter_stdout_log`;
+# We put all the files linked to the metric computation in a new directory
+my $store_metric_files="Metric_files";
+mkpath($store_metric_files);
+`mv $out_file_affi $store_metric_files/`;
+`mv $out_file_phage_fragments $store_metric_files/`;
+`mv $new_prots_to_cluster $store_metric_files/`;
+# And we add the readme file in the output directory
+`cp $readme_file .`;
