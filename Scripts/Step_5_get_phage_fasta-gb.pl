@@ -32,13 +32,13 @@ my $gb_file_p1=$code."_prophages_cat-4.gb";
 my $gb_file_p2=$code."_prophages_cat-5.gb";
 my $gb_file_p3=$code."_prophages_cat-6.gb";
 print "The sequences will be put in $out_file_1 / $out_file_2 / $out_file_3 / $out_file_p1 / $out_file_p2 / $out_file_p3\n";
-my $summary=$out_dir.$code."_global-phage-signal.csv";
-my $last_affi=$out_dir.$code."_phage-signal.csv";
-# my $mga_predict=$out_dir."fasta/".$code."_mga_final.predict";
-my $affi_contigs=$out_dir.$code."_affi-contigs.csv";
-my $fasta_contigs=$out_dir."fasta/".$code."_nett_filtered.fasta";
-# my $fasta_contigs=$out_dir."fasta/input_sequences.fna";
-my $fasta_prot=$out_dir."fasta/".$code."_prots.fasta";
+my $summary=$code."_global-phage-signal.csv";
+my $last_affi=$code."_phage-signal.csv";
+# my $mga_predict="fasta/".$code."_mga_final.predict";
+my $affi_contigs=$code."_affi-contigs.csv";
+my $fasta_contigs="fasta/".$code."_nett_filtered.fasta";
+# my $fasta_contigs="fasta/input_sequences.fna";
+my $fasta_prot="fasta/".$code."_prots.fasta";
 
 if (-e $last_affi){
 	my %compte=(1=>0,2=>0,3=>0,4=>0,5=>0,6=>0);

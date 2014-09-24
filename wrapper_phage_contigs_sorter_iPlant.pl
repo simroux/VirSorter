@@ -341,9 +341,11 @@ print "\t$out\n";
 
 # Plus clean the output directory
 print "Cleaning the output directory\n";
+# We rm the first db to not overload user disk space
 my $db_revision_0="r_0/db";
 $out=`rm -r $db_revision_0`;
 print "rm -r $db_revision_0 : $out\n";
+`mv fasta/ Fasta_files/`;
 # We put all results from Hmmsearch and BLAST files in a separate directory
 my $store_database_comparison="Tab_files";
 mkpath($store_database_comparison);
@@ -362,7 +364,9 @@ mkpath($store_database_comparison);
 my $store_metric_files="Metric_files";
 mkpath($store_metric_files);
 `mv $out_file_affi $store_metric_files/`;
+my $out_file_affi_ref  = $code_dataset . "_affi-contigs.refs";
+`mv $out_file_affi_ref $store_metric_files/`;
 `mv $out_file_phage_fragments $store_metric_files/`;
 `mv $new_prots_to_cluster $store_metric_files/`;
 # And we add the readme file in the output directory
-`cp $readme_file .`;
+`cp $readme_file ./`;
