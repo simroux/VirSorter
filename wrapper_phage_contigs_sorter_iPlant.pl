@@ -37,6 +37,8 @@ if ($help || $original_fna_file eq '' || $choice_database eq '') {
    pod2usage();
 }
 
+print "Dataset : $code_dataset, Fna file : $original_fna_file, Db : $choice_database, Wdir : $wdir, Custom phages : $custom_phage\n";
+
 # Need 2 databases
 # PCs from Refseq (phages) or PCs from Refseq+Viromes
 # PFAM (26.0)
@@ -207,13 +209,10 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
 
             ## Adding custom sequences to the database if required by the user
             if ( $custom_phage ne "" ) {
-                my $script_custom_phage =
-                  $script_dir . "Step_first_add_custom_phage_sequence.pl";
-                $out =
-`$script_custom_phage $custom_phage $dir_Phage_genes $dir_revision/db >> $log_out 2>> $log_err`;
+                my $script_custom_phage = catfile($script_dir,"Step_first_add_custom_phage_sequence.pl");
+                $out =`$script_custom_phage $custom_phage $dir_Phage_genes $dir_revision/db >> $log_out 2>> $log_err`;
                 print "Adding custom phage to the database : $out\n";
             }
-
             # should replace Pool_cluster / Pool_unclustered and
             # Pool_new_unclustered else , we just import the Refseq database
             else { `cp $dir_Phage_genes/* $dir_revision/db/`; }
