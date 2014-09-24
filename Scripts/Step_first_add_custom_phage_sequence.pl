@@ -15,6 +15,7 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 }
 
 
+my $virsorter_dir="/usr/local/bin/Virsorter/";
 my $path_to_formatdb="formatdb";
 my $path_to_blastall="blastall";
 my $path_to_muscle="/usr/bin/muscle";
