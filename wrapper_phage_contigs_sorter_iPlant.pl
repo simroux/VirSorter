@@ -38,6 +38,17 @@ if ($help || $original_fna_file eq '' || $choice_database eq '') {
 }
 
 print "Dataset : $code_dataset, Fna file : $original_fna_file, Db : $choice_database, Wdir : $wdir, Custom phages : $custom_phage\n";
+# We check if the custom phage is an actual fasta file, or if it's the working dir (which means -> no custom phage).
+if ($custom_phage=~/.*\.f.*/){}
+else{
+	if($wdir=~/.*\/$custom_phage$/){
+		print "The custom phage is actually the wdir id, so we remove it\n";
+		$custom_phage="";
+	}
+	else{
+		die("we do not understand this custom phage : $custom_phage");
+	}
+}
 
 # Need 2 databases
 # PCs from Refseq (phages) or PCs from Refseq+Viromes
@@ -70,7 +81,7 @@ my $readme_file = catfile($virsorter_dir,"VirSorter_Reamde.txt");
 
 if ( $choice_database == 2 ) {
     $dir_Phage_genes = catdir($virsorter_dir,"Database/Phage_gene_catalog_plus_viromes/");
-    $ref_phage_clusters = catfile ($dir_Phage_genes,"Phage_Clusters_current.tab");
+    $ref_phage_clusters = catfile($virsorter_dir,"Database/Phage_gene_catalog_plus_viromes/Phage_Clusters_current.tab");
 }
 my $db_PFAM_a = catfile($virsorter_dir,"Database/PFAM_27/Pfam-A.hmm");
 my $db_PFAM_b = catfile($virsorter_dir,"Database/PFAM_27/Pfam-B.hmm");
@@ -241,12 +252,10 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         my $new_db_profil = catfile( $dir_revision, "db", "Pool_clusters.hmm" );
         my $check = 0;
         open my $DB, '<', $new_db_profil;
-
         while (<$DB>) {
             if ( $_ =~ /^NAME/ ) { $check++; }
         }
         close $DB;
-
         if ( $check == 0 ) {
             print "There is no clusters in the database, so we skip the hmmsearch\n";
         }
