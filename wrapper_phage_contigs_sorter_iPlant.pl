@@ -39,9 +39,10 @@ if ($help || $original_fna_file eq '' || $choice_database eq '') {
 
 # Need 2 databases
 # PCs from Refseq (phages) or PCs from Refseq+Viromes
-# PFAM (26.0?)
+# PFAM (26.0)
 
 my $n_cpus = 8;
+my $virsorter_dir="/usr/local/bin/Virsorter/";
 
 # my $code_dataset      = $ARGV[0];
 # my $original_fna_file = $ARGV[1];
@@ -56,24 +57,20 @@ my $microbial_base_needed = 0;
 my $log_out = "log_out";
 my $log_err = "log_err";
 
-my $path_to_mga =
-  "/usr/local/bin/Virsorter/Tools/Metagene_annotator/mga_linux_ia64";
-my $path_hmmsearch =
-"/usr/local/bin/Virsorter/Tools/hmmer-3.0-linux-intel-x86_64/binaries/hmmsearch";
+my $path_to_mga =catfile($virsorter_dir,"Tools/Metagene_annotator/mga_linux_ia64");
+my $path_hmmsearch =catfile($virsorter_dir,"Tools/hmmer-3.0-linux-intel-x86_64/binaries/hmmsearch");
 my $path_blastall    = "/usr/bin/blastall";
 my $path_to_formatdb = "/usr/bin/formatdb";
-my $script_dir       = "/usr/local/bin/Virsorter/Scripts/";
-my $dir_Phage_genes  = "/usr/local/bin/Virsorter/Database/Phage_gene_catalog/";
-my $ref_phage_clusters =
-"/usr/local/bin/Virsorter/Database/Phage_gene_catalog/Phage_Clusters_current.tab";
+my $script_dir       = catdir($virsorter_dir,"Scripts/");
+my $dir_Phage_genes  = catdir($virsorter_dir,"Database/Phage_gene_catalog/");
+my $ref_phage_clusters = catfile($virsorter_dir,"Database/Phage_gene_catalog/Phage_Clusters_current.tab");
 
 if ( $choice_database == 2 ) {
-    $dir_Phage_genes =
-      "/usr/local/bin/Virsorter/Database/Phage_gene_catalog_plus_viromes/";
-    $ref_phage_clusters = $dir_Phage_genes . "Phage_Clusters_current.tab";
+    $dir_Phage_genes = catdir($virsorter_dir,"Database/Phage_gene_catalog_plus_viromes/");
+    $ref_phage_clusters = catfile ($dir_Phage_genes,"Phage_Clusters_current.tab");
 }
-my $db_PFAM_a = "/usr/local/bin/Virsorter/Database/PFAM_27/Pfam-A.hmm";
-my $db_PFAM_b = "/usr/local/bin/Virsorter/Database/PFAM_27/Pfam-B.hmm";
+my $db_PFAM_a = catfile($virsorter_dir,"Database/PFAM_27/Pfam-A.hmm");
+my $db_PFAM_b = catfile($virsorter_dir,"Database/PFAM_27/Pfam-B.hmm");
 
 my $out = "";
 
@@ -92,13 +89,9 @@ if ( -d $fastadir ) {
 }
 else {
     mkpath($fastadir);
-
-    #`mkdir $fastadir > $log_out 2> $log_err`;
     my $fna_file = catfile( $fastadir, "input_sequences.fna" );
-
     open my $fa, '<', $original_fna_file;
     open my $s1, '>', $fna_file;
-
     while (<$fa>) {
         chomp($_);
         if ( $_ =~ /^>(.*)/ ) {
@@ -114,21 +107,18 @@ else {
     }
     close $fa;
     close $s1;
-
     # detect circular, predict genes on contigs and extract proteins, as well
     # as filtering on size (nb genes) and/or circular
     my $nb_gene_th = 2; # At least two complete genes on the contig
-    my $cmd_step_1 = $script_dir
-      . "Step_1_contigs_cleaning_and_gene_prediction.pl $code_dataset $fastadir $fna_file $nb_gene_th >> $log_out 2>> $log_err";
-
+    my $path_script_step_1 = catfile($script_dir,"Step_1_contigs_cleaning_and_gene_prediction.pl");
+    my $cmd_step_1 = "$path_script_step_1 $code_dataset $fastadir $fna_file $nb_gene_th >> $log_out 2>> $log_err";
     print "Step 0.5 : $cmd_step_1\n";
     `echo $cmd_step_1 >> $log_out 2>> $log_err`;
     { $out = `$cmd_step_1`; }
 }
 
 print "\t$out\n";
-my $fasta_contigs_nett =
-  catfile( $fastadir, $code_dataset . "_nett_filtered.fasta" );
+my $fasta_contigs_nett = catfile( $fastadir, $code_dataset . "_nett_filtered.fasta" );
 my $fasta_file_prots = catfile( $fastadir, $code_dataset . "_prots.fasta" );
 
 # Match against PFAM, once for all
@@ -176,15 +166,15 @@ my $global_out_file          = $code_dataset . "_global-phage-signal.csv";
 my $new_prots_to_cluster     = $code_dataset . "_new_prot_list.csv";
 
 # Constant scripts
-my $script_merge_annot = $script_dir . "Step_2_merge_contigs_annotation.pl";
+my $script_merge_annot = catfile($script_dir,"Step_2_merge_contigs_annotation.pl");
 my $cmd_merge =
-"$script_merge_annot $predict_file $out_hmmsearch $out_blast_unclustered $out_hmmsearch_pfama $out_hmmsearch_pfamb $ref_phage_clusters  >> $log_out 2>> $log_err";
+"$script_merge_annot $predict_file $out_hmmsearch $out_blast_unclustered $out_hmmsearch_pfama $out_hmmsearch_pfamb $ref_phage_clusters $out_file_affi >> $log_out 2>> $log_err";
 
-my $script_detect = $script_dir . "Step_3_highlight_phage_signal.pl";
+my $script_detect = catfile($script_dir,"Step_3_highlight_phage_signal.pl");
 my $cmd_detect =
 "$script_detect $out_file_affi $out_file_phage_fragments >> $log_out 2>> $log_err";
 
-my $script_summary = $script_dir . "Step_4_summarize_phage_signal.pl";
+my $script_summary =catfile($script_dir,"Step_4_summarize_phage_signal.pl");
 my $cmd_summary =
 "$script_summary $out_file_affi $out_file_phage_fragments $global_out_file $new_prots_to_cluster >> $log_out 2>> $log_err";
 
@@ -317,7 +307,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
     `echo $cmd_merge >> $log_out 2>> $log_err`;
     $out = `$cmd_merge`; 
     ## This generate a csv table including the map of each contig, with PFAM
-    #and VGC annotations, as well as strand and length of genes
+    #and Viral PCs annotations, as well as strand and length of genes
 
     print "\t$out\n";
     ## Complete the summary
@@ -337,7 +327,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
 }
 
 # Last step -> extract all sequences -> fasta / Gb ????
-my $script_generate_output = $script_dir . "Step_5_get_phage_fasta-gb.pl";
+my $script_generate_output = catfile($script_dir,"Step_5_get_phage_fasta-gb.pl");
 my $cmd_step_5 = "$script_generate_output $wdir >> $log_out 2>> $log_err";
 print "\nStep 5 : $cmd_step_5\n";
 
