@@ -25,12 +25,12 @@ my $custom_phage      = '';
 my $wdir              = cwd();
 
 GetOptions(
-   'd|dataset' => \$code_dataset,
-   'fna'       => \$original_fna_file,
-   'db'        => \$choice_database,
-   'wdir'      => \$wdir,
-   'cp'        => \$custom_phage,
-   'h|help'    => \$help,
+   'd|dataset=s' => \$code_dataset,
+   'fna=s'       => \$original_fna_file,
+   'db=i'        => \$choice_database,
+   'wdir=s'      => \$wdir,
+   'cp=s'        => \$custom_phage,
+   'h|help'      => \$help,
 );
 
 if ($help || $original_fna_file eq '' || $choice_database eq '') {
