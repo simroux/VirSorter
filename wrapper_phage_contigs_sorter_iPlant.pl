@@ -77,7 +77,7 @@ my $path_to_formatdb = "/usr/bin/formatdb";
 my $script_dir       = catdir($virsorter_dir,"Scripts/");
 my $dir_Phage_genes  = catdir($virsorter_dir,"Database/Phage_gene_catalog/");
 my $ref_phage_clusters = catfile($virsorter_dir,"Database/Phage_gene_catalog/Phage_Clusters_current.tab");
-my $readme_file = catfile($virsorter_dir,"VirSorter_Reamde.txt");
+my $readme_file = catfile($virsorter_dir,"VirSorter_Readme.txt");
 
 if ( $choice_database == 2 ) {
     $dir_Phage_genes = catdir($virsorter_dir,"Database/Phage_gene_catalog_plus_viromes/");
@@ -210,9 +210,6 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         print "Out : $out\n";
         ## Clustering of the new prots with the unclustered
         my $script_new_cluster = catfile($script_dir,"Step_0_make_new_clusters.pl");
-        my $previous_hmm_cluster;
-        my $previous_fasta_unclustered;
-
         # First revision, we just import the Refseq database
         if ( $r_n == 0 ) {
             #`mkdir $dir_revision/db`;
@@ -230,11 +227,11 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         }
         else {
             my $previous_r = $r_n - 1;
-            $previous_fasta_unclustered =
+            my $previous_fasta_unclustered =
               catfile( "r_" . $previous_r, "db", "Pool_unclustered.faa" );
             my $cmd_new_clusters = join(' ',
                 "$script_new_cluster $dir_revision $fasta_file_prots",
-                "$previous_fasta_unclustered $previous_hmm_cluster",
+                "$previous_fasta_unclustered",
                 "$new_prots_to_cluster >> $log_out 2>> $log_err"
             );
 
@@ -242,7 +239,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
             $out = `$cmd_new_clusters`;
             print "Step 1.1 new clusters and new database : $out\n";
             # Rm the list of prots to be clustered now that they should be
-            #clustered
+            # clustered
             $out = `rm $new_prots_to_cluster`;
             print "rm $new_prots_to_cluster -> $out\n";
         }
@@ -253,7 +250,8 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         my $check = 0;
         open my $DB, '<', $new_db_profil;
         while (<$DB>) {
-            if ( $_ =~ /^NAME/ ) { $check++; }
+	    chomp($_);
+            if ( $_ =~ /^NAME/ ) { $check++; print "there is a cluster $_ in the database, so we're good\n"; }
         }
         close $DB;
         if ( $check == 0 ) {
@@ -371,10 +369,22 @@ mkpath($store_database_comparison);
 # We put all the files linked to the metric computation in a new directory
 my $store_metric_files="Metric_files";
 mkpath($store_metric_files);
-`mv $out_file_affi $store_metric_files/`;
+`mv $out_file_affi $store_metric_files/VIRSorter_affi-contigs.tab`;
 my $out_file_affi_ref  = $code_dataset . "_affi-contigs.refs";
 `mv $out_file_affi_ref $store_metric_files/`;
-`mv $out_file_phage_fragments $store_metric_files/`;
+`mv $out_file_phage_fragments $store_metric_files/VIRSorter_phage_signal.tab`;
 `mv $new_prots_to_cluster $store_metric_files/`;
-# And we add the readme file in the output directory
-`cp $readme_file ./`;
+# And we customize and add the readme file in the output directory
+my $datestring=localtime();
+my $local_readme_file="Readme.txt";
+open my $s1,'>',$local_readme_file;
+print $s1 "VirSorter parameters used :\n\n";
+print $s1 "--> Fasta file mined for viral sequences : $original_fna_file\n";
+print $s1 "--> Viral database used : ";
+if ($choice_database==2){print $s1 "Viromes : all bacterial and archaeal virus genomes in Refseq, as of January 2014, plus non-redundant predicted genes from viral metagenomes (including seawater, freshwater, and human-related samples)\n"}
+else{print $s1 "RefseqABVir (all bacterial and archaeal virus genomes in Refseq, as of January 2014\n";}
+if ($custom_phage eq ""){print $s1 "--> No custom reference sequence was added to the database\n";}
+else{print $s1 "--> Custom reference sequences from fasta file $custom_phage were added to the database\n";}
+print $s1 "\nThis VirSorter computation finished on $datestring\n";
+close $s1;
+`cat $readme_file >> $local_readme_file`;

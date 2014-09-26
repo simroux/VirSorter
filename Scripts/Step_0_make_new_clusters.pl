@@ -23,14 +23,14 @@ my $MCX_LOAD = "/usr/local/bin/mcxload";
 my $MCL      = "/usr/local/bin/mcl";
 
 my $r_dir=$ARGV[0];
-$r_dir =~ /.*\/(r_\d*)\/?$/;
+$r_dir=~/(r_\d*)\/?$/;
 my $r_number=$1;
 print "Revision $r_number\n";
 my $fasta_prot_contigs=$ARGV[1];
 my $fasta_prot_unclustered=$ARGV[2];
+my $liste=$ARGV[3];
 my $blast_unclustered=$fasta_prot_unclustered;
 $blast_unclustered=~s/Pool_unclustered.faa/Blast_unclustered.tab/;
-my $liste=$ARGV[3];
 
 my $path_to_formatdb="formatdb";
 my $path_to_blastall="blastall";
