@@ -235,9 +235,11 @@ if (-e $last_affi){
 					else{
 						print ".. predicted to be a prophage..\n";
 						if ($tab[2]=~/^$id_c-(gene_\d+)-(gene_\d+)/){
-							my $start=$infos{$id_c}{$1}{"start"}-$decal;
+							my $gene_start=$1;
+							my $start=$infos{$id_c}{$gene_start}{"start"}-$decal;
 							if ($start<0){$start=0;}
-							my $stop=$infos{$id_c}{$2}{"stop"}+$decal;
+							my $gene_stop=$2;
+							my $stop=$infos{$id_c}{$gene_stop}{"stop"}+$decal;
 							my $length=$stop-$start;
 							print "  from $1 to $2 .. from $start to $stop ($length)\n";
 							my $substr=substr($seq_c,$start,$length);
@@ -247,28 +249,31 @@ if (-e $last_affi){
 							$sequence->add_SeqFeature($featsource);
 							foreach(sort { $infos{$id_c}{$a}{"order"} <=> $infos{$id_c}{$b}{"order"} } keys %{$infos{$id_c}}){
 								my $gene=$_;
-								my $splitlocation = Bio::Location::Split->new();
-								my $strand=0;
-								if ($infos{$id_c}{$gene}{"strand"} eq "-"){$strand=-1;}
-								$splitlocation->add_sub_Location(Bio::Location::Simple->new(-start=>$infos{$id_c}{$gene}{"start"}-$start,-end=>$infos{$id_c}{$gene}{"stop"}-$start,-strand=>$strand));
-								my $featgene = Bio::SeqFeature::Generic->new(-location => $splitlocation,-primary => "gene",-tag => {'gene' => "$gene",'locus_tag' => $id_c."_".$gene});
-								$sequence->add_SeqFeature($featgene);
-								my $product=$infos{$id_c}{$gene}{"affi"};
-								my $note="Predicted by MGA";
-								my $featcds = Bio::SeqFeature::Generic->new(-location=>$splitlocation,-primary => "CDS",-tag => {'product' => "$product",'note' => "$note",'locus_tag' => $id_c."_".$gene,'codon_start' => "1",'gene' => "$gene",'transl_table' => "11"});
-								$sequence->add_SeqFeature($featcds);
-								$featcds->add_tag_value('translation',$infos{$id_c}{$gene}{"seq"});
+								# Check if the gene is in the fragment entirely
+								if (($infos{$id_c}{$gene}{"start"}>=$start) && ($infos{$id_c}{$gene}{"start"}<=$stop) && ($infos{$id_c}{$gene}{"stop"}>=$start) && ($infos{$id_c}{$gene}{"stop"}<=$stop)){
+									my $splitlocation = Bio::Location::Split->new();
+									my $strand=0;
+									if ($infos{$id_c}{$gene}{"strand"} eq "-"){$strand=-1;}
+									$splitlocation->add_sub_Location(Bio::Location::Simple->new(-start=>$infos{$id_c}{$gene}{"start"}-$start,-end=>$infos{$id_c}{$gene}{"stop"}-$start,-strand=>$strand));
+									my $featgene = Bio::SeqFeature::Generic->new(-location => $splitlocation,-primary => "gene",-tag => {'gene' => "$gene",'locus_tag' => $id_c."_".$gene});
+									$sequence->add_SeqFeature($featgene);
+									my $product=$infos{$id_c}{$gene}{"affi"};
+									my $note="Predicted by MGA";
+									my $featcds = Bio::SeqFeature::Generic->new(-location=>$splitlocation,-primary => "CDS",-tag => {'product' => "$product",'note' => "$note",'locus_tag' => $id_c."_".$gene,'codon_start' => "1",'gene' => "$gene",'transl_table' => "11"});
+									$sequence->add_SeqFeature($featcds);
+									$featcds->add_tag_value('translation',$infos{$id_c}{$gene}{"seq"});
+								}
 							}
 							if ($check{$id_c}{$_}{"category"}==4){
-								print SP1 ">$id_red-$start-$stop-cat_$check{$id_c}{$_}{category}\n$substr\n";
+								print SP1 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
 								$output_p1->write_seq($sequence);
 							}
 							elsif ($check{$id_c}{$_}{"category"}==5){
-								print SP2 ">$id_red-$start-$stop-cat_$check{$id_c}{$_}{category}\n$substr\n";
+								print SP2 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
 								$output_p2->write_seq($sequence);
 							}
 							elsif($check{$id_c}{$_}{"category"}==6){
-								print SP3 ">$id_red-$start-$stop-cat_$check{$id_c}{$_}{category}\n$substr\n";
+								print SP3 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
 								$output_p3->write_seq($sequence);
 							}
 						}
@@ -349,9 +354,11 @@ if (-e $last_affi){
 			else{
 				print ".. predicted to be a prophage..\n";
 				if ($tab[2]=~/^$id_c-(gene_\d+)-(gene_\d+)/){
-					my $start=$infos{$id_c}{$1}{"start"}-$decal;
+					my $gene_start=$1;
+					my $start=$infos{$id_c}{$gene_start}{"start"}-$decal;
 					if ($start<0){$start=0;}
-					my $stop=$infos{$id_c}{$2}{"stop"}+$decal;
+					my $gene_stop=$2;
+					my $stop=$infos{$id_c}{$gene_stop}{"stop"}+$decal;
 					my $length=$stop-$start;
 					print "  from $1 to $2 .. from $start to $stop ($length)\n";
 					my $substr=substr($seq_c,$start,$length);
@@ -361,28 +368,30 @@ if (-e $last_affi){
 					$sequence->add_SeqFeature($featsource);
 					foreach(sort { $infos{$id_c}{$a}{"order"} <=> $infos{$id_c}{$b}{"order"} } keys %{$infos{$id_c}}){
 						my $gene=$_;
-						my $splitlocation = Bio::Location::Split->new();
-						my $strand=0;
-						if ($infos{$id_c}{$gene}{"strand"} eq "-"){$strand=-1;}
-						$splitlocation->add_sub_Location(Bio::Location::Simple->new(-start=>$infos{$id_c}{$gene}{"start"}-$start,-end=>$infos{$id_c}{$gene}{"stop"}-$start,-strand=>$strand));
-						my $featgene = Bio::SeqFeature::Generic->new(-location => $splitlocation,-primary => "gene",-tag => {'gene' => "$gene",'locus_tag' => $id_c."_".$gene});
-						$sequence->add_SeqFeature($featgene);
-						my $product=$infos{$id_c}{$gene}{"affi"};
-						my $note="Predicted by MGA";
-						my $featcds = Bio::SeqFeature::Generic->new(-location=>$splitlocation,-primary => "CDS",-tag => {'product' => "$product",'note' => "$note",'locus_tag' => $id_c."_".$gene,'codon_start' => "1",'gene' => "$gene",'transl_table' => "11"});
-						$sequence->add_SeqFeature($featcds);
-						$featcds->add_tag_value('translation',$infos{$id_c}{$gene}{"seq"});
+						if ((($infos{$id_c}{$gene}{"start"}-$start)>0) && (($infos{$id_c}{$gene}{"start"}-$start)<=$stop) && (($infos{$id_c}{$gene}{"stop"}-$start)>0) && (($infos{$id_c}{$gene}{"stop"}-$start)<=$stop)){
+							my $splitlocation = Bio::Location::Split->new();
+							my $strand=0;
+							if ($infos{$id_c}{$gene}{"strand"} eq "-"){$strand=-1;}
+							$splitlocation->add_sub_Location(Bio::Location::Simple->new(-start=>$infos{$id_c}{$gene}{"start"}-$start,-end=>$infos{$id_c}{$gene}{"stop"}-$start,-strand=>$strand));
+							my $featgene = Bio::SeqFeature::Generic->new(-location => $splitlocation,-primary => "gene",-tag => {'gene' => "$gene",'locus_tag' => $id_c."_".$gene});
+							$sequence->add_SeqFeature($featgene);
+							my $product=$infos{$id_c}{$gene}{"affi"};
+							my $note="Predicted by MGA";
+							my $featcds = Bio::SeqFeature::Generic->new(-location=>$splitlocation,-primary => "CDS",-tag => {'product' => "$product",'note' => "$note",'locus_tag' => $id_c."_".$gene,'codon_start' => "1",'gene' => "$gene",'transl_table' => "11"});
+							$sequence->add_SeqFeature($featcds);
+							$featcds->add_tag_value('translation',$infos{$id_c}{$gene}{"seq"});
+						}
 					}
 					if ($check{$id_c}{$_}{"category"}==4){
-						print SP1 ">$id_red-$start-$stop-cat_$check{$id_c}{$_}{category}\n$substr\n";
+						print SP1 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
 						$output_p1->write_seq($sequence);
 					}
 					elsif ($check{$id_c}{$_}{"category"}==5){
-						print SP2 ">$id_red-$start-$stop-cat_$check{$id_c}{$_}{category}\n$substr\n";
+						print SP2 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
 						$output_p2->write_seq($sequence);
 					}
 					elsif($check{$id_c}{$_}{"category"}==6){
-						print SP3 ">$id_red-$start-$stop-cat_$check{$id_c}{$_}{category}\n$substr\n";
+						print SP3 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
 						$output_p3->write_seq($sequence);
 					}
 				}
