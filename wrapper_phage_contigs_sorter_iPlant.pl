@@ -21,6 +21,7 @@ my $help              = '';
 my $code_dataset      = $0;
 my $original_fna_file = '';
 my $choice_database   = '';
+my $tag_virome        = '';
 my $custom_phage      = '';
 my $wdir              = cwd();
 
@@ -28,6 +29,7 @@ GetOptions(
    'd|dataset=s' => \$code_dataset,
    'fna=s'       => \$original_fna_file,
    'db=i'        => \$choice_database,
+   'virome=i'    => \$tag_virome,
    'wdir=s'      => \$wdir,
    'cp=s'        => \$custom_phage,
    'h|help'      => \$help,
@@ -48,6 +50,10 @@ else{
 	else{
 		die("we do not understand this custom phage : $custom_phage");
 	}
+}
+
+if($tag_virome==1){
+	print "!!! THIS WILL BE A VIROME DECONTAMINATION RUN\n";
 }
 
 # Need 2 databases
@@ -78,6 +84,8 @@ my $script_dir       = catdir($virsorter_dir,"Scripts/");
 my $dir_Phage_genes  = catdir($virsorter_dir,"Database/Phage_gene_catalog/");
 my $ref_phage_clusters = catfile($virsorter_dir,"Database/Phage_gene_catalog/Phage_Clusters_current.tab");
 my $readme_file = catfile($virsorter_dir,"VirSorter_Readme.txt");
+if ( $tag_virome == 1 ){$readme_file = catfile($virsorter_dir,"VirSorter_Readme_viromes.txt");}
+my $generic_ref_file = catfile($virsorter_dir,"Generic_ref_file.refs");
 
 if ( $choice_database == 2 ) {
     $dir_Phage_genes = catdir($virsorter_dir,"Database/Phage_gene_catalog_plus_viromes/");
@@ -188,6 +196,8 @@ my $cmd_merge =
 my $script_detect = catfile($script_dir,"Step_3_highlight_phage_signal.pl");
 my $cmd_detect =
 "$script_detect $out_file_affi $out_file_phage_fragments >> $log_out 2>> $log_err";
+if ($tag_virome==1){$cmd_detect =
+"$script_detect $out_file_affi $out_file_phage_fragments $generic_ref_file >> $log_out 2>> $log_err";}
 
 my $script_summary =catfile($script_dir,"Step_4_summarize_phage_signal.pl");
 my $cmd_summary =
@@ -251,7 +261,10 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         open my $DB, '<', $new_db_profil;
         while (<$DB>) {
 	    chomp($_);
-            if ( $_ =~ /^NAME/ ) { $check++; print "there is a cluster $_ in the database, so we're good\n"; }
+            if ( $_ =~ /^NAME/ ) { 
+		$check++; 
+		# print "there is a cluster $_ in the database, so we're good\n"; 
+	    }
         }
         close $DB;
         if ( $check == 0 ) {
