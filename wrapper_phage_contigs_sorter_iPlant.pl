@@ -398,6 +398,7 @@ if ($choice_database==2){print $s1 "Viromes : all bacterial and archaeal virus g
 else{print $s1 "RefseqABVir (all bacterial and archaeal virus genomes in Refseq, as of January 2014\n";}
 if ($custom_phage eq ""){print $s1 "--> No custom reference sequence was added to the database\n";}
 else{print $s1 "--> Custom reference sequences from fasta file $custom_phage were added to the database\n";}
+if ($tag_virome==1){print $s1 "VirSorter was run with the in the 'Virome Decontamination' mode: overall metrics for microbial sequences were not evaluated from the complete dataset, but instead pre-computed values based on bacterial and archaeal genomes from Refseq were used."}
 print $s1 "\nThis VirSorter computation finished on $datestring\n";
 close $s1;
 `cat $readme_file >> $local_readme_file`;

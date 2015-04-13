@@ -19,7 +19,8 @@ my $ref_file=$ARGV[0];
 $ref_file=~s/\.csv/.refs/g;
 my $do_ref_estimation=0;
 if (defined($ARGV[2])){
-	$ref_file=$ARGV[2];
+#	$ref_file=$ARGV[2];
+	`cp $ARGV[2] $ref_file`; # That way, the ref file is in the result directory if a use wants to check it
 	$do_ref_estimation=1;
 }
 

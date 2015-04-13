@@ -172,7 +172,7 @@ foreach(sort {$a <=> $b } keys %infos){
 				for (my $i=$class+1;$i<=6;$i++){
 					if (defined($infos{$i}{$contig}{$_})){
 						print "$_ defined in $class, so we remove its info for $i\n";
-						delete($infos{$i}{$_});
+						delete($infos{$i}{$contig}{$_});
 					}
 				}
 			}
