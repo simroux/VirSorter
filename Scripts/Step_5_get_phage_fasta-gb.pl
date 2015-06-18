@@ -185,11 +185,11 @@ if (-e $last_affi){
 					$tab[0]=~s/\]/_/g;
 					$tab[2]=~s/\[/_/g;
 					$tab[2]=~s/\]/_/g;
-					$tab[2]=~s/-circular//g;
+					# $tab[2]=~s/-circular//g;
 					my $desc="Putative phage sequence (category $check{$id_c}{$_}{category}), predicted by PhageSorter";
 					my $iscirc=0;
 					if ($check{$id_c}{$tab[2]}{"circular"}==1){
-						$id_red.="-circ";
+						# $id_red.="-circ";
 						$iscirc=1;
 					}
 					if ($check{$id_c}{$_}{"category"}<=3){
@@ -243,7 +243,9 @@ if (-e $last_affi){
 							my $length=$stop-$start;
 							print "  from $1 to $2 .. from $start to $stop ($length)\n";
 							my $substr=substr($seq_c,$start,$length);
-							$sequence = Bio::Seq::RichSeq->new(-display_id => "$id_red", -accession_number => "$id_red", -desc => $desc ,-seq =>"$substr",-is_circular =>$iscirc,-division => "ENV",-alphabet => "dna");
+							$iscirc=0; # An integrated prophage cannot be circular, so set this to linear 
+							my $display_id=$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"};
+							$sequence = Bio::Seq::RichSeq->new(-display_id => "$display_id", -accession_number => "$display_id", -desc => $desc ,-seq =>"$substr",-is_circular =>$iscirc,-division => "ENV",-alphabet => "dna");
 							$sequence->add_date(`date +%D`);
 							my $featsource = Bio::SeqFeature::Generic->new(-start => 1,-end => length($substr),-primary => "source",-tag => {'organism' => "$desc"});
 							$sequence->add_SeqFeature($featsource);
@@ -265,15 +267,15 @@ if (-e $last_affi){
 								}
 							}
 							if ($check{$id_c}{$_}{"category"}==4){
-								print SP1 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
+								print SP1 ">".$display_id."\n".$substr."\n";
 								$output_p1->write_seq($sequence);
 							}
 							elsif ($check{$id_c}{$_}{"category"}==5){
-								print SP2 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
+								print SP2 ">".$display_id."\n".$substr."\n";
 								$output_p2->write_seq($sequence);
 							}
 							elsif($check{$id_c}{$_}{"category"}==6){
-								print SP3 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
+								print SP3 ">".$display_id."\n".$substr."\n";
 								$output_p3->write_seq($sequence);
 							}
 						}
@@ -289,7 +291,7 @@ if (-e $last_affi){
 		else{$seq_c.=$_;}
 	}
 	close FASTA;
-	# WE do not forget the last one
+	# We do not forget the last one
 	if (defined($check{$id_c})){
 		my $id_red=$id_c;
 		print "We had checked $id_c -> $id_red\n";
@@ -304,11 +306,11 @@ if (-e $last_affi){
 			$tab[0]=~s/\]/_/g;
 			$tab[2]=~s/\[/_/g;
 			$tab[2]=~s/\]/_/g;
-			$tab[2]=~s/-circular//g;
+			# $tab[2]=~s/-circular//g;
 			my $desc="Putative phage sequence (category $check{$id_c}{$_}{category}), predicted by PhageSorter";
 			my $iscirc=0;
 			if ($check{$id_c}{$tab[2]}{"circular"}==1){
-				$id_red.="-circ";
+				# $id_red.="-circ";
 				$iscirc=1;
 			}
 			if ($check{$id_c}{$_}{"category"}<=3){
@@ -361,8 +363,10 @@ if (-e $last_affi){
 					my $stop=$infos{$id_c}{$gene_stop}{"stop"}+$decal;
 					my $length=$stop-$start;
 					print "  from $1 to $2 .. from $start to $stop ($length)\n";
+                                        $iscirc=0; # An integrated prophage cannot be circular, so set this to linear 
+                                        my $display_id=$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"};
 					my $substr=substr($seq_c,$start,$length);
-					$sequence = Bio::Seq::RichSeq->new(-display_id => "$id_red", -accession_number => "$id_red", -desc => $desc ,-seq =>"$substr",-is_circular =>$iscirc,-division => "ENV",-alphabet => "dna");
+					$sequence = Bio::Seq::RichSeq->new(-display_id => "$display_id", -accession_number => "$display_id", -desc => $desc ,-seq =>"$substr",-is_circular =>$iscirc,-division => "ENV",-alphabet => "dna");
 					$sequence->add_date(`date +%D`);
 					my $featsource = Bio::SeqFeature::Generic->new(-start => 1,-end => length($substr),-primary => "source",-tag => {'organism' => "$desc"});
 					$sequence->add_SeqFeature($featsource);
@@ -383,15 +387,15 @@ if (-e $last_affi){
 						}
 					}
 					if ($check{$id_c}{$_}{"category"}==4){
-						print SP1 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
+						print SP1 ">".$display_id."\n".$substr."\n";
 						$output_p1->write_seq($sequence);
 					}
 					elsif ($check{$id_c}{$_}{"category"}==5){
-						print SP2 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
+						print SP2 ">".$display_id."\n".$substr."\n";
 						$output_p2->write_seq($sequence);
 					}
 					elsif($check{$id_c}{$_}{"category"}==6){
-						print SP3 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{category}."\n".$substr."\n";
+						print SP3 ">".$display_id."\n".$substr."\n";
 						$output_p3->write_seq($sequence);
 					}
 				}

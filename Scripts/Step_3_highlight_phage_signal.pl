@@ -391,6 +391,33 @@ foreach(@liste_contigs){
 					delete($match{$fragment_id});
 				}
 			}
+			## New addition that should help to get the prophage coordinates correctly !
+			# And now check if one of the prophage map to the whole sequence
+			foreach(keys %merged_match){
+				print "This is a prophage\n";
+				my $fragment_id=$_;
+				if ($merged_match{$fragment_id}{"size"}>$th_contig_size){
+					$tag_complete=1;
+					my $new_fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
+					print "We have a complete prophage -- we add it $new_fragment_id !\n";
+					<STDIN>;
+					foreach(keys %{$merged_match{$fragment_id}}){
+						$merged_match{$new_fragment_id}{$_}=$merged_match{$fragment_id}{$_};
+					}
+					$merged_match{$new_fragment_id}{"type"}="complete_phage";# And we store the type of fragment
+				}
+			}
+			if ($tag_complete==1){
+				# We can remove all the prophages
+				my @tab_temp=keys %merged_match;
+				foreach(@tab_temp){
+					if ($merged_match{$_}{"type"} eq "complete_phage"){}
+					else{
+						delete($merged_match{$_});
+					}
+				}
+			}
+			## END OF THE NEW ADDITION
 		}
 		open(S1,">>$out_file") || die ("pblm opening file $out_file\n");
 		foreach(sort { $merged_match{$b}{"size"} <=> $merged_match{$a}{"size"} } keys %merged_match){ ## IMPORTANT, HAVE TO BE SIZE ORDERED
