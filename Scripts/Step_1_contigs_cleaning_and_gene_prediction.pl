@@ -1,7 +1,10 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
+
 use strict;
-use lib '/usr/local/bin/Virsorter/Tools/BioPerl-1.6.1';
+use autodie;
 use Bio::Seq;
+use File::Which 'which';
+
 # Script to detect circular contigs, nett sequences, and predict genes with mga
 # Argument 0 : Fasta file of contigs
 if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[3])))
@@ -20,7 +23,7 @@ my $tmp_dir=$ARGV[1];
 my $fasta_contigs=$ARGV[2];
 my $th_nb_genes=$ARGV[3];
 
-my $path_to_mga="/usr/local/bin/Virsorter/Tools/Metagene_annotator/mga_linux_ia64";
+my $path_to_mga = which('mga_linux_ia64');
 
 my $in_file=$tmp_dir."/".$id."_nett.fasta";
 my $circu_file=$tmp_dir."/".$id."_circu.list";
@@ -42,8 +45,9 @@ my $minimum_size=1500;
 my %order_contig;
 my %length;
 my $n1=0;
-open(S1,">$in_file") || die "pblm ouverture fichier $in_file\n";
-open(S2,">$circu_file") || die "pblm ouverture fichier $circu_file\n";
+
+open S1, '>', $in_file;
+open S2, '>', $circu_file;
 foreach(sort {length($seq_base{$b}) <=> length($seq_base{$a})} keys %seq_base){
 	my $id_contig=$_;
 	$order_contig{$id_contig}=$n1;

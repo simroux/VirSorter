@@ -1,5 +1,10 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
+
 use strict;
+use autodie;
+use File::Spec::Functions;
+use FindBin '$Bin';
+
 # Script to measure metrics on the sliding window
 # Argument 0 : csv file of the contigs
 # Argument 1 : summary file of the phage fragments
@@ -31,10 +36,10 @@ my $th_sig_2=4;
 my $th_nb_genes_covered=0.80;
 my $th_nb_genes_noncaudo=1;
 ## END OF ABSOLUTE THRESHOLDS ##
-my $script_dir="/usr/local/bin/Virsorter/Scripts/";
+my $script_dir= catfile($Bin, "Scripts");
 # my $script_dir="./Scripts_dir/";
 # my $path_to_c_script=$script_dir."Sliding_windows";
-my $path_to_c_script=$script_dir."Sliding_windows_3";
+my $path_to_c_script= catfile($script_dir, "Sliding_windows_3");
 
 print "## Taking information from the contig info file ($csv_file)\n";
 open(F1,"<$csv_file") || die "pblm ouverture fichier $csv_file\n";

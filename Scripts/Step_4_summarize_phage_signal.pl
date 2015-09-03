@@ -1,5 +1,8 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
+
 use strict;
+use autodie;
+
 # Script to make a summary of the predictions to add to previous predictions
 # Argument 0 : summary file of the phage fragments
 # Argument 1 : global summary to be completed

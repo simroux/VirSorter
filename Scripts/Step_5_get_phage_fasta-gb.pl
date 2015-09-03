@@ -1,5 +1,7 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
+
 use strict;
+use autodie;
 use Bio::SeqIO;
 use Bio::Seq;
 use Bio::SeqFeature::Generic;

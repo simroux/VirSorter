@@ -1,5 +1,7 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
+
 use strict;
+use autodie;
 # Script to generate the merged contig annotation (annotate each gene)
 # Argument 0 : MGA predict file
 # Argument 1 : HMMsearch vs Phage Clusters

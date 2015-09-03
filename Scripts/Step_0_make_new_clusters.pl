@@ -1,8 +1,10 @@
 #!/usr/bin/env perl
 
 use strict;
+use autodie;
 use File::Spec::Functions;
 use File::Path 'mkpath';
+use File::Which 'which';
 
 # Script to generate a new db with putative new clusters
 # Argument 0 : revision directory
@@ -19,8 +21,9 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 	die "\n";
 }
 
-my $MCX_LOAD = "/usr/local/bin/mcxload";
-my $MCL      = "/usr/local/bin/mcl";
+my $path_to_blastall = which("blastall");
+my $MCX_LOAD         = which("mcxload");
+my $MCL              = which("mcl");
 
 my $r_dir=$ARGV[0];
 $r_dir=~/(r_\d*)\/?$/;
@@ -32,16 +35,16 @@ my $liste=$ARGV[3];
 my $blast_unclustered=$fasta_prot_unclustered;
 $blast_unclustered=~s/Pool_unclustered.faa/Blast_unclustered.tab/;
 
-my $path_to_formatdb="formatdb";
-my $path_to_blastall="blastall";
+my $path_to_formatdb = which("formatdb");
+my $path_to_blastal = which("blastall");
 #my $path_to_mcl_bin="/home/simroux/Utiles/Mcl_12_135/mcl-12-135/bin/";
 #my $path_to_mcl_bin="/usr/local/bin/Virsorter/Tools/mcl-12-135/";
 
 my $min_seq_in_a_cluster=3;
 
-my $path_to_muscle="/usr/bin/muscle";
-my $path_to_hmmbuild="hmmbuild";
-my $path_to_hmmpress="hmmpress";
+my $path_to_muscle= which("muscle");
+my $path_to_hmmbuild= which("hmmbuild");
+my $path_to_hmmpress= which("hmmpress");
 
 
 my %check;

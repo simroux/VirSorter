@@ -11,48 +11,71 @@
 use strict;
 use warnings;
 use autodie;
+use FindBin '$Bin';
 use File::Spec::Functions;
 use File::Path 'mkpath';
+use File::Which 'which';
 use Getopt::Long 'GetOptions';
 use Pod::Usage;
 use Cwd 'cwd';
 
 my $help              = '';
-my $code_dataset      = $0;
+my $code_dataset      = 'VIRSorter';
 my $original_fna_file = '';
 my $choice_database   = '';
-my $tag_virome        = '';
+my $tag_virome        = 0;
 my $custom_phage      = '';
+my $data_dir          = '/data';
 my $wdir              = cwd();
 
 GetOptions(
-   'd|dataset=s' => \$code_dataset,
    'fna=s'       => \$original_fna_file,
-   'db=i'        => \$choice_database,
-   'virome=i'    => \$tag_virome,
-   'wdir=s'      => \$wdir,
-   'cp=s'        => \$custom_phage,
+   'd|dataset:s' => \$code_dataset,
+   'db:i'        => \$choice_database,
+   'virome:i'    => \$tag_virome,
+   'wdir:s'      => \$wdir,
+   'cp:s'        => \$custom_phage,
+   'data-dir:s'  => \$data_dir,
    'h|help'      => \$help,
 );
 
-if ($help || $original_fna_file eq '' || $choice_database eq '') {
+if ($help) {
    pod2usage();
 }
 
-print "Dataset : $code_dataset, Fna file : $original_fna_file, Db : $choice_database, Wdir : $wdir, Custom phages : $custom_phage\n";
-# We check if the custom phage is an actual fasta file, or if it's the working dir (which means -> no custom phage).
-if ($custom_phage=~/.*\.f.*/){}
-else{
-	if($wdir=~/.*\/$custom_phage$/){
-		print "The custom phage is actually the wdir id, so we remove it\n";
-		$custom_phage="";
-	}
-	else{
-		die("we do not understand this custom phage : $custom_phage");
-	}
+unless ($original_fna_file) {
+    pod2usage('Missing FASTA file');
 }
 
-if($tag_virome==1){
+unless ($choice_database == 1 || $choice_database == 2) {
+    pod2usage('choice_database must be 1 or 2');
+}
+
+print join("\n",
+    "Dataset      : $code_dataset", 
+    "Fna file     : $original_fna_file", 
+    "Db           : $choice_database", 
+    "Wdir         : $wdir", 
+    "Custom phages: $custom_phage",
+    ''
+);
+
+#
+# This code does nothing useful.
+#
+# We check if the custom phage is an actual fasta file, or if it's the working dir (which means -> no custom phage).
+#if ($custom_phage=~/.*\.f.*/){}
+#else{
+#	if($wdir=~/.*\/$custom_phage$/){
+#		print "The custom phage is actually the wdir id, so we remove it\n";
+#		$custom_phage="";
+#	}
+#	else{
+#		die("we do not understand this custom phage : $custom_phage");
+#	}
+#}
+
+if ($tag_virome) {
 	print "!!! THIS WILL BE A VIROME DECONTAMINATION RUN\n";
 }
 
@@ -61,7 +84,6 @@ if($tag_virome==1){
 # PFAM (26.0)
 
 my $n_cpus = 8;
-my $virsorter_dir="/usr/local/bin/Virsorter/";
 
 # my $code_dataset      = $ARGV[0];
 # my $original_fna_file = $ARGV[1];
@@ -73,43 +95,49 @@ print "#%#%#%#%#%# Processing $code_dataset....\n";
 my $microbial_base_needed = 0;
 ## replace this directory with the iPlant dir
 #my $wdir=$wdir."/".$code_dataset."/";
-my $log_out = "log_out";
-my $log_err = "log_err";
 
-my $path_to_mga = catfile($virsorter_dir,"Tools/Metagene_annotator/mga_linux_ia64");
-my $path_hmmsearch = catfile($virsorter_dir,"Tools/hmmer-3.0-linux-intel-x86_64/binaries/hmmsearch");
-my $path_blastall    = "/usr/bin/blastall";
-my $path_to_formatdb = "/usr/bin/formatdb";
-my $script_dir       = catdir($virsorter_dir,"Scripts/");
-my $dir_Phage_genes  = catdir($virsorter_dir,"Database/Phage_gene_catalog/");
-my $ref_phage_clusters = catfile($virsorter_dir,"Database/Phage_gene_catalog/Phage_Clusters_current.tab");
-my $readme_file = catfile($virsorter_dir,"VirSorter_Readme.txt");
-if ( $tag_virome == 1 ){$readme_file = catfile($virsorter_dir,"VirSorter_Readme_viromes.txt");}
-my $generic_ref_file = catfile($virsorter_dir,"Generic_ref_file.refs");
+my $path_to_mga        = which('mga_linux_ia64');
+my $path_hmmsearch     = which('hmmsearch');
+my $path_blastall      = which('blastall');
+my $path_to_formatdb   = which('formatdb');
+my $log_out            = catfile($wdir, 'log_out');
+my $log_err            = catfile($wdir, 'log_err');
+my $script_dir         = catdir($Bin, 'Scripts');
+my $dir_Phage_genes    = catdir($data_dir,'Phage_gene_catalog');
+my $ref_phage_clusters = catfile($data_dir,
+                         'Phage_gene_catalog/Phage_Clusters_current.tab');
+my $readme_file        = catfile($Bin,"VirSorter_Readme.txt");
+
+if ( $tag_virome == 1 ){
+    $readme_file = catfile($Bin,"VirSorter_Readme_viromes.txt");
+}
+
+my $generic_ref_file = catfile($Bin,"Generic_ref_file.refs");
 
 if ( $choice_database == 2 ) {
-    $dir_Phage_genes = catdir($virsorter_dir,"Database/Phage_gene_catalog_plus_viromes/");
-    $ref_phage_clusters = catfile($virsorter_dir,"Database/Phage_gene_catalog_plus_viromes/Phage_Clusters_current.tab");
+    $dir_Phage_genes    = catdir($data_dir, "Phage_gene_catalog_plus_viromes/");
+    $ref_phage_clusters = catfile($data_dir,
+        "Phage_gene_catalog_plus_viromes/Phage_Clusters_current.tab");
 }
-my $db_PFAM_a = catfile($virsorter_dir,"Database/PFAM_27/Pfam-A.hmm");
-my $db_PFAM_b = catfile($virsorter_dir,"Database/PFAM_27/Pfam-B.hmm");
+
+my $db_PFAM_a = catfile($data_dir, "PFAM_27/Pfam-A.hmm");
+my $db_PFAM_b = catfile($data_dir, "PFAM_27/Pfam-B.hmm");
 
 my $out = "";
 
 ## SETTING UP THE WORKING DIRECTORY
-if (!-d 'log') {
-    mkpath('log');
+my $log_dir = catdir($wdir, 'log');
+if (-d $log_dir) {
+    $out = `rm -r $log_dir/* *.csv`;
+    print "rm -r log* *.csv => $out\n";
+} 
+else {
+    mkpath($log_dir);
 }
-$out = `rm -r log/* *.csv`;
-print "rm -r log* *.csv => $out\n";
 
 # cp fasta file in the wdir
-my $fastadir = "fasta";
-if ( -d $fastadir ) {
-    # Should not be used on iPlant, but you never know
-    $out = "Already a fasta directory .. skipping (the great guru)\n";
-}
-else {
+my $fastadir = catdir($wdir, "fasta");
+if ( !-d $fastadir ) {
     mkpath($fastadir);
     my $fna_file = catfile( $fastadir, "input_sequences.fna" );
     open my $fa, '<', $original_fna_file;
@@ -157,9 +185,7 @@ if ( !( -e $out_hmmsearch_pfama ) ) {
     $out = `$cmd_hmm_pfama`;
     print "\t$out\n";
 }
-else { 
-    $out = "Already a results for PFAM A .. skipping (the great guru)\n"; 
-}
+
 my $out_hmmsearch_pfamb     = "Contigs_prots_vs_PFAMb.tab";
 my $out_hmmsearch_pfamb_bis = "Contigs_prots_vs_PFAMb.out";
 my $cmd_hmm_pfamb =

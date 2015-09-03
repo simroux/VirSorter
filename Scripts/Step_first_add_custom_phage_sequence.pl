@@ -1,8 +1,12 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
+
 use strict;
+use autodie;
+use FindBin '$Bin';
 use Bio::Seq;
 use File::Spec::Functions;
 use File::Path 'mkpath';
+use File::Which 'which';
 # Script to generate a new db with putative new clusters
 # Argument 0 : Fasta file of the new phages
 
@@ -17,16 +21,16 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 }
 
 
-my $virsorter_dir="/usr/local/bin/Virsorter/";
-my $path_to_formatdb="formatdb";
-my $path_to_blastall="blastall";
-my $path_to_muscle="/usr/bin/muscle";
-my $path_to_hmmbuild="hmmbuild";
-my $path_to_hmmpress="hmmpress";
-my $path_hmmsearch = catfile($virsorter_dir,"Tools/hmmer-3.0-linux-intel-x86_64/binaries/hmmsearch");
-my $path_to_mga = catfile($virsorter_dir,"Tools/Metagene_annotator/mga_linux_ia64");
-my $MCX_LOAD = "/usr/local/bin/mcxload";
-my $MCL      = "/usr/local/bin/mcl";
+my $virsorter_dir    = "/usr/local/bin/Virsorter/";
+my $path_to_formatdb = which("formatdb");
+my $path_to_blastall = which("blastall");
+my $path_to_muscle   = which("muscle");
+my $path_to_hmmbuild = which("hmmbuild");
+my $path_to_hmmpress = which("hmmpress");
+my $path_hmmsearch   = which("hmmsearch");
+my $path_to_mga      = which("mga_linux_ia64");
+my $MCX_LOAD         = which("mcxload");
+my $MCL              = which("mcl");
 
 my $min_seq_in_a_cluster=3;
 my $n_cpus=8;
@@ -42,11 +46,11 @@ $tmp_dir.="/";
 my $log_out=$tmp_dir."log_out_step_custom_phage";
 my $log_err=$tmp_dir."log_err_step_custom_phage";
 
-my $db_phage=$tmp_dir."Pool_clusters.hmm";
-my $blastable_unclustered=$tmp_dir."Pool_new_unclustered";
-my $fasta_unclustered=$tmp_dir."Pool_new_unclustered.faa";
-my $ref_phage_clusters=$tmp_dir."Phage_Clusters_current.tab";
-my $blast_unclustered=$tmp_dir."Blast_unclustered.tab";
+my $db_phage              = $tmp_dir . "Pool_clusters.hmm";
+my $blastable_unclustered = $tmp_dir . "Pool_new_unclustered";
+my $fasta_unclustered     = $tmp_dir . "Pool_new_unclustered.faa";
+my $ref_phage_clusters    = $tmp_dir . "Phage_Clusters_current.tab";
+my $blast_unclustered     = $tmp_dir . "Blast_unclustered.tab";
 
 open(F1,"<$fasta_contigs") || die "pblm ouverture fichier $fasta_contigs\n";
 my %seq_base;
@@ -115,7 +119,8 @@ foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 			my $new_line=join("\t",@tab);
 			$predict{$id}{$_}=$new_line;
 		}
-		my @tab=split("\t",$predict{$id}{$_});
+
+		@tab=split("\t",$predict{$id}{$_});
 		my $name=$tab[0];
 		my $start=$tab[1];
 		my $stop=$tab[2];
