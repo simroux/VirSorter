@@ -27,16 +27,17 @@ my $in_file           = catfile($tmp_dir, $id . "_nett.fasta");
 my $circu_file        = catfile($tmp_dir, $id . "_circu.list");
 my $out_special_circu = catfile($tmp_dir, $id . "_contigs_circu_temp.fasta");
 
-open F1, '<', $fasta_contigs;
+# Reading fasta file of the contigs
+open my $fa, '<', $fasta_contigs;
 my %seq_base;
 my $id_seq="";
-while(<F1>){
+while(<$fa>){
 	$_=~s/\r\n/\n/g; #Cas d'un fichier windows ##AJOUT
 	chomp($_);
 	if ($_=~/^>(\S*)/){$id_seq=$1;}
 	else{$seq_base{$id_seq}.=$_;}
 }
-close F1;
+close $fa;
 
 ## DETECTION OF CIRCULAR CONTIG AND CLEANING OF THESE CIRCULAR (REMOVE THE MATCHING ENDS)
 my $minimum_size=1500;
@@ -44,11 +45,10 @@ my %order_contig;
 my %length;
 my $n1=0;
 
-open S1, '>', $in_file;
-open S2, '>', $circu_file;
+open my $s1, '>', $in_file;
+open my $s2, '>', $circu_file;
 for my $id_contig (
-    sort {length($seq_base{$b}) <=> length($seq_base{$a})} keys %seq_base
-){
+    sort {length($seq_base{$b}) <=> length($seq_base{$a})} keys %seq_base){
 	$order_contig{$id_contig}=$n1;
 	$n1++;
 	my $s=$seq_base{$id_contig};
@@ -66,45 +66,45 @@ for my $id_contig (
 			my $l=$length{$id_contig};
 			$id_contig=$id_contig."-circular";
 			$length{$id_contig}=$l;
-			print S2 "$id_contig\t$length{$id_contig}\n";
+			print $s2 "$id_contig\t$length{$id_contig}\n";
 			$seq_base{$id_contig}=$sequence;
 		}
 	}
 	# Update the length of the contig
 	$length{$id_contig}=length($seq_base{$id_contig});
-	print S1 ">$id_contig\n$seq_base{$id_contig}\n";
+	print $s1 ">$id_contig\n$seq_base{$id_contig}\n";
 }
-close S1;
-close S2;
+close $s1;
+close $s2;
 
 # Gene prediction for all contigs
 my $out_file= $tmp_dir."/".$id."_mga.predict";
 print "$path_to_mga $in_file -m > $out_file\n";
 my $mga=`$path_to_mga $in_file -m > $out_file`;
 
-# Special prediction for circular contigs
+# Special prediction for circular contigs if we have some
 my $out_file_circu="";
 my %circu;
 if (-e $circu_file){
-	open CI, '<', $circu_file;
-	while(<CI>){
+	open my $tsv, '<', $circu_file;
+	while(<$tsv>){
 		chomp($_);
 		my @tab=split("\t",$_);
 		my $id_c=$tab[0];
 		$circu{$id_c}=1;
 	}
-	close CI;
-	open S2, '>', $out_special_circu;
+	close $tsv;
+	open my $s3, '>', $out_special_circu;
 	my $long=1000; # we cp the 1000 first bases to the end of the contig
 	my $seuil_long=1000;
 	my $n_circu=0;
 	foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %circu){
 		my $id_c=$_;
 		my $s=$seq_base{$id_c}.substr($seq_base{$id_c},0,$long);
-		print S2 ">$id_c\n$s\n";
+		print $s3 ">$id_c\n$s\n";
 		$n_circu++;
 	}
-	close S2;
+	close $s3;
 	$out_file_circu= $tmp_dir."/".$id."_special_circus_mga.predict";
 	if ($n_circu>0){
 		my $mga=`$path_to_mga $out_special_circu -m > $out_file_circu`;
@@ -117,11 +117,11 @@ if (-e $circu_file){
 # Mix 'n match of the two results of gene prediction
 my %order_gene;
 my $n2=0;
-open RESU, '<', $out_file;
+open my $fts, '<', $out_file;
 my %predict;
 my %type;
 my $id_c="";
-while(<RESU>){
+while(<$fts>){
 	chomp($_);
 	if($_=~/^# gc/){}
 	elsif($_=~/^# self: (.*)/){$type{$id_c}=$1;}
@@ -135,35 +135,34 @@ while(<RESU>){
 		if (!defined($order_gene{$id_c}{$tab[0]})){$order_gene{$id_c}{$tab[0]}=$n2;$n2++;}
 	}
 }
-close RESU;
+close $fts;
 if (-e $circu_file){
-	open CIR, '<', $out_file_circu;
+	open my $fts_c, '<', $out_file_circu;
 	my $tag=0;
-	while(<CIR>){
+	while(<$fts_c>){
 		chomp($_);
 		if($_=~/^# gc/){}
 		elsif($_=~/^# self: (.*)/){$type{$id_c}=$1;}
 		elsif ($_=~/^# (.*)/){
 			if($tag==1){
 				my %to_start;
-# 				print "on a remplacé certains orfs pour $id_c, on fait du ménage en cherchant des gènes qui seraient partiellement prédits, soit au début, soit à la fin du contig\n";
+				# Some ORFs were modified, we clean up
 				foreach(sort {$order_gene{$a} <=> $order_gene{$b} } keys %{$predict{$id_c}}){
 					my @tab=split("\t",$predict{$id_c}{$_});
 					if ($tab[5]!=11){
-# 						print "\t$tab[0] n'a pas le(s) codon(s) start et / ou stop\n";
+						# $tab[0] miss start and/or stop codon
 						if(($tab[1]<3) || ($tab[2]>($length{$id_c}-3))){
-# 							print "\tet il est autour de l'origine, on enlève\n";
+							# And it spans the origin, so we can remove it
 							if ($tab[1]<3){
 								$to_start{$tab[0]}{"start"}=$tab[1];
 								$to_start{$tab[0]}{"stop"}=$tab[2];
 							}
 							delete($predict{$id_c}{$tab[0]});
 						}
-						elsif(($tab[2]>997) && ($tab[2]<1001)){ # si on est dans la zone des 1000
+						elsif(($tab[2]>997) && ($tab[2]<1001)){ # if we are around the zone of ~ 1000
 							foreach(keys %to_start){
-								my $total=($length{$id_c}-$tab[1]+1)+($to_start{$_}{"stop"}); # longueur du fragment terminal + longueur du fragment initial potentiel - pour ce deuxième, on omet le -1 +1 puisque de toute facon ce fragment commencera forcèment en +1
+								my $total=($length{$id_c}-$tab[1]+1)+($to_start{$_}{"stop"}); 
 								if ($total % 3 == 0){
-		#							print "\t et on peut l'étendre grâce à une autre prédiction : -> $to_start{$_}{stop}\n";
 									$tab[2]=$to_start{$_}{"stop"};
 									$tab[5]=11;
 									my $new_line=join("\t",@tab);
@@ -175,19 +174,16 @@ if (-e $circu_file){
 				}
 			}
 			$id_c=$1;
-# 			print "## on passe à $id_c\n";
 			$tag=0;
 		}
 		else{
 			my @tab=split("\t",$_);
 			if (defined($predict{$id_c}{$tab[0]})){
 				my @tab2=split("\t",$predict{$id_c}{$tab[0]});
-				if (($tab2[1]==$tab[1]) && ($tab2[2]==$tab[2])){}#print "même prédiction pour $tab[0], on change rien\n";}
+				if (($tab2[1]==$tab[1]) && ($tab2[2]==$tab[2])){}# same prediction, we don't change anything
 				else{
-# 					print "prédiction différente pour $tab[0] de $id_c, on regarde si on est dans la zone qui nous interesse $length{$id_c} == $tab[1] $tab[2] vs $tab2[1]  $tab2[2]\n";
-					# si on chevauche l'origine
 					if (($tab[1]<$length{$id_c}) && ($tab[2]>$length{$id_c})){
-# 						print "on chevauche l'origine ! on remplace la prédiction\n";
+						# we span the origin, we replace the prediction
 						$tag=1;
 						my $stop=$tab[2]-$length{$id_c};
 						$tab[2]=$stop;
@@ -197,14 +193,13 @@ if (-e $circu_file){
 				}
 			}
 			else{
-				# print "on prédit un nouveau gène, qu'on ne garde que si il débute avant la fin du vrai contig\n";
+				# we predict a new gene, we keep only if at the start / end of the contig
 				if (($tab[1]<$length{$id_c}) && ($tab[2]>$length{$id_c})){
 					$tag=1;
 					my $stop=$tab[2]-$length{$id_c};
 					$tab[2]=$stop;
 					my $new_line=join("\t",@tab);
 					$predict{$id_c}{$tab[0]}=$new_line;
-# 					print "on chevauche l'origine avec un nouveau gene ($tab[0]) ! on rajoute la prédiction\n";
 					$tag=1;
 				}
 			}
@@ -212,24 +207,21 @@ if (-e $circu_file){
 	}
 	if($tag==1){
 		my %to_start;
-# 		print "on a remplacé certains orfs pour $id_c, on fait du ménage en cherchant des gènes qui seraient partiellement prédits, soit au début, soit à la fin du contig\n";
+		# we changed some things, we clean up
 		foreach(sort {$order_gene{$a} <=> $order_gene{$b} } keys %{$predict{$id_c}}){
 			my @tab=split("\t",$predict{$id_c}{$_});
 			if ($tab[5]!=11){
-# 				print "\t$tab[0] n'a pas le(s) codon(s) start et / ou stop\n";
 				if(($tab[1]<3) || ($tab[2]>($length{$id_c}-3))){
-# 					print "\tet il est autour de l'origine, on enlève\n";
 					if ($tab[1]<3){
 						$to_start{$tab[0]}{"start"}=$tab[1];
 						$to_start{$tab[0]}{"stop"}=$tab[2];
 					}
 					delete($predict{$id_c}{$tab[0]});
 				}
-				elsif(($tab[2]>997) && ($tab[2]<1001)){ # si on est dans la zone des 1000
+				elsif(($tab[2]>997) && ($tab[2]<1001)){
 					foreach(keys %to_start){
-						my $total=($length{$id_c}-$tab[1]+1)+($to_start{$_}{"stop"}); # longueur du fragment terminal + longueur du fragment initial potentiel - pour ce deuxième, on omet le -1 +1 puisque de toute facon ce fragment commencera forcèment en +1
+						my $total=($length{$id_c}-$tab[1]+1)+($to_start{$_}{"stop"}); 
 						if ($total % 3 == 0){
-#							print "\t et on peut l'étendre grâce à une autre prédiction : -> $to_start{$_}{stop}\n";
 							$tab[2]=$to_start{$_}{"stop"};
 							$tab[5]=11;
 							my $new_line=join("\t",@tab);
@@ -240,7 +232,7 @@ if (-e $circu_file){
 			}
 		}
 	}
-	close CIR;
+	close $fts_c;
 }
 
 ## Generation of the final files
@@ -251,9 +243,9 @@ my $final_file=$tmp_dir."/".$id."_nett_filtered.fasta";
 my $out_final=$tmp_dir."/".$id."_mga_final.predict";
 my $prot_file=$tmp_dir."/".$id."_prots.fasta";
 
-open FNA,  '>', $final_file;
-open SF,   '>', $out_final;
-open PROT, '>', $prot_file;
+open my $fa_s,  '>', $final_file;
+open my $out_s, '>', $out_final;
+open my $prot_s,'>', $prot_file;
 my $n=0;
 foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 	$n++;
@@ -285,10 +277,10 @@ foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 		}
 # 		if ($n_complete_genes<$th_nb_genes){print "$id is saved because of its circularity\n";}
 # 		else{print "We keep $id = $#tab_genes +1 genes\n";}
-		print SF ">$id\t$length{$id}\n";
-		print FNA ">$id\n";
+		print $out_s ">$id\t$length{$id}\n";
+		print $fa_s ">$id\n";
 		my $seq_c=$seq_base{$id};
-		print FNA "$seq_c\n";
+		print $fa_s "$seq_c\n";
 		foreach(@tab_genes){
 			my @tab=split("\t",$predict{$id}{$_});
 			if ($tab[5]!=11){
@@ -307,34 +299,46 @@ foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 				my $new_line=join("\t",@tab);
 				$predict{$id}{$_}=$new_line;
 			}
-			print SF "$predict{$id}{$_}\n";
+			print $out_s "$predict{$id}{$_}\n";
 			@tab=split("\t",$predict{$id}{$_});
-            my $name  = $tab[0];
-            my $start = $tab[1];
-            my $stop  = $tab[2];
-            my $sens  = $tab[3];
-            my $frame = $tab[4];
-            my $frag  = "";
-			# Cas "normal" (on chevauche pas l'origine)
+	                my $name  = $tab[0];
+	                my $start = $tab[1];
+	                my $stop  = $tab[2];
+	                my $sens  = $tab[3];
+	                my $frame = $tab[4];
+	                my $frag  = "";
+			# Regular case (not spanning the origin)
 			if ($start<$stop){
 				my $long=$stop-$start+1;
 				$frag=substr($seq_c,$start-1,$long);
 			}
-			# Cas exceptionnel, on chevauche l'origine du contig
+			# Exceptional case, we span the origin
 			else{
 				my $l1=length($seq_c)-$start+1;
 				$frag=substr($seq_c,$start-1,$l1);
 				$frag.=substr($seq_c,0,$stop);
 			}
-			## POUR RECUPERER LA SEQ PROT
-			my $seq_bio = Bio::Seq->new(-seq =>$frag,-alphabet => 'dna' );
-			my @seqs = Bio::SeqUtils->translate_6frames($seq_bio);
+			## WE GET THE PREDICTED PROTEIN SEQUENCE
+			if ($frag eq ""){
+				print "!!!! FRAG IS $frag\n";
+			}
+			my $seq_bio = Bio::Seq->new(-id => "dummy_id" , -seq =>$frag, -alphabet => 'dna', -verbose => -1);
+			# Test to catch the Bio SeqUtils warning
+			my @seqs;
+			eval{
+				@seqs = Bio::SeqUtils->translate_6frames($seq_bio, -verbose => -1);
+			};
+			if ( $@ ){
+				print "We got the error $@\n";
+			}
+			#my @seqs = Bio::SeqUtils->translate_6frames($seq_bio, -verbose => -1);
+			# End of test
 			my $cadre=0;
 			if ($sens eq "-"){$cadre=3;}
 			my $prot=$seqs[$cadre];
 			my $prot_sequence=$prot->seq;
 			if ($prot_sequence=~/\*$/){
-	# 				print "on enlève le codon stop final pour muscle\n";
+				# we remove the stop codon
 				chop($prot_sequence);
 			}
 			my $id_out=$id."-".$name;
@@ -342,11 +346,11 @@ foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 				print "we exclude $id_out because there is a pblm with the sequence -> too many succesive X, F, A, K or P\n";
 			}
 			else{
-				print PROT ">$id_out\n$prot_sequence\n";
+				print $prot_s ">$id_out\n$prot_sequence\n";
 			}
 		}
 	}
 }
-close FNA;
-close SF;
-close PROT;
+close $fa_s;
+close $out_s;
+close $prot_s;

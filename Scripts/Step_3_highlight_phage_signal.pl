@@ -36,9 +36,7 @@ my $th_sig_2=4;
 my $th_nb_genes_covered=0.80;
 my $th_nb_genes_noncaudo=1;
 ## END OF ABSOLUTE THRESHOLDS ##
-my $script_dir= catfile($Bin, "Scripts");
-# my $script_dir="./Scripts_dir/";
-# my $path_to_c_script=$script_dir."Sliding_windows";
+my $script_dir= catfile($Bin);
 my $path_to_c_script= catfile($script_dir, "Sliding_windows_3");
 
 print "## Taking information from the contig info file ($csv_file)\n";
@@ -206,10 +204,11 @@ foreach(@liste_contigs){
 	close MAP_C;
 	### Now go execute the C program
 	my $c_cmd="$path_to_c_script $ref_file $out_file_c $out_file_c2";
-    print "$c_cmd\n";
+#        print "Step 1 - $c_cmd\n";
 	my $out=`$c_cmd`;
 # 	print "$out\n";
 	$c_cmd="sort -r -n -k 4 $out_file_c2 > $out_file_c3";
+#        print "Step 2 - $c_cmd\n";	
 	$out=`$c_cmd`;
 # 	print "$out\n";
 	### reading the c program output to fill the match hash table / and removing overlap

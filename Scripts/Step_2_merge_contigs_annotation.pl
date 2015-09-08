@@ -34,15 +34,16 @@ my $out_file             = $ARGV[6];
 
 my $circu_file=$mga_file;
 $circu_file=~s/_mga_final.predict/_circu.list/;
+# Take list of circular files
 my %circu;
-open CI, '<', $circu_file;
-while(<CI>){
+open my $li, '<', $circu_file;
+while(<$li>){
 	chomp($_);
 	my @tab=split("\t",$_);
 	my $id_c=$tab[0];
 	$circu{$id_c}=1;
 }
-close CI;
+close $li;
 
 my $n2=0;
 my %size;
@@ -51,8 +52,9 @@ my %predict;
 my %type;
 my $id_c="";
 my @liste_contigs;
-open MGA, '<',  $mga_file;
-while(<MGA>){
+# Read all gene predictions
+open my $fts, '<',  $mga_file;
+while(<$fts>){
 	chomp($_);
 	if ($_=~/^>(.*)/){
 		my @tab=split("\t",$1);
@@ -68,14 +70,14 @@ while(<MGA>){
 		$n2++;
 	}
 }
-close MGA;
+close $fts;
 
-# first the BLAST vs unclustered , which will eventually be erased by the HMM vs Phage cluster (that we trust more)
+# first the BLAST vs unclustered , which annotation will eventually be erased by the HMM vs Phage cluster if any (that we trust more)
 my %affi_phage_cluster;
 my $score_blast_th=50;
 my $evalue_blast_th=0.001;
-open BL, '<', $blast_vs_unclustered;
-while (<BL>){
+open my $tsv, '<', $blast_vs_unclustered;
+while (<$tsv>){
 	chomp($_);
 	my @tab=split("\t",$_);
 	my $seq=$tab[0];
@@ -91,14 +93,15 @@ while (<BL>){
 	}
 	
 }
-close BL;
+close $tsv;
 
 
 my $score_th=40;
 my $evalue_th=0.00001;
 
-open TB, '<', $hmm_phage_clusters;
-while(<TB>){
+# Then reading the annotation from the HMM vs Phage Cluster
+open my $tsv, '<', $hmm_phage_clusters;
+while(<$tsv>){
 	chomp($_);
 	if ($_=~m/^#/){
 		next;
@@ -118,11 +121,12 @@ while(<TB>){
 		}
 	}
 }
-close TB;
+close $tsv;
 
+# Then reading annotation from PFAM
 my %affi_pfam;
-open TB, '<', $hmm_pfama;
-while(<TB>){
+open my $tsv, '<', $hmm_pfama;
+while(<$tsv>){
 	chomp($_);
 	if ($_=~m/^#/){
 		next;
@@ -140,10 +144,10 @@ while(<TB>){
 		}
 	}
 }
-close TB;
+close $tsv;
 
-open TB, '<', $hmm_pfamb;
-while(<TB>){
+open my $tsv, '<', $hmm_pfamb;
+while(<$tsv>){
 	chomp($_);
 	if ($_=~m/^#/){
 		next;
@@ -161,23 +165,24 @@ while(<TB>){
 		}
 	}
 }
-close TB;
+close $tsv;
 
 
+# We also read the annotation for each phage cluster, i.e. its category
 my %phage_cluster;
-open REF, '<', $ref_phage_clusters;
-while (<REF>){
+open my $psv, '<', $ref_phage_clusters;
+while (<$psv>){
 	chomp($_);
 	my @tab=split(/\|/,$_);
 	$phage_cluster{$tab[0]}{"category"}=$tab[1];
 }
-close REF;
+close $psv;
 
 
 # Final output
 # >Contig,nb_genes,circularity
 # gene_id,start,stop,length,strand,affi_phage,score,evalue,category,affi_pfam,score,evalue,
-open S1, '>', $out_file;
+open my $s1, '>', $out_file;
 my $n=0;
 foreach(@liste_contigs){
 	$n++;
@@ -187,7 +192,7 @@ foreach(@liste_contigs){
 	if ($circu{$contig_c}==1){$circ="c";}
 	my @tab_genes=sort {$order_gene{$contig_c}{$a} <=> $order_gene{$contig_c}{$b} } keys %{$predict{$contig_c}};
 	my $n_g=$#tab_genes+1;
-	print S1 ">$contig_c|$n_g|$circ\n";
+	print $s1 ">$contig_c|$n_g|$circ\n";
 	foreach(@tab_genes){
 		my $g_c=$_;
 		my @tab=split("\t",$predict{$contig_c}{$g_c});
@@ -221,11 +226,10 @@ foreach(@liste_contigs){
 		if ($length<0){ # It can happen if one gene overlap the contig origin
 			$length=($size{$contig_c}-$start)+$stop;
 		}
-		print S1 "$g_c|$start|$stop|$length|$strand|$affi_pc|$affi_pc_score|$affi_pc_evalue|$affi_category|$affi_pfam|$affi_pfam_score|$affi_pfam_evalue\n";
+		print $s1 "$g_c|$start|$stop|$length|$strand|$affi_pc|$affi_pc_score|$affi_pc_evalue|$affi_category|$affi_pfam|$affi_pfam_score|$affi_pfam_evalue\n";
 	}
 }
-
-close S1;
+close $s1;
 
 
 

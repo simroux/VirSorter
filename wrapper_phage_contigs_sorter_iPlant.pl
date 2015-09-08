@@ -106,13 +106,16 @@ my $script_dir         = catdir($Bin, 'Scripts');
 my $dir_Phage_genes    = catdir($data_dir,'Phage_gene_catalog');
 my $ref_phage_clusters = catfile($data_dir,
                          'Phage_gene_catalog/Phage_Clusters_current.tab');
-my $readme_file        = catfile($Bin,"VirSorter_Readme.txt");
+# my $readme_file        = catfile($script_dir,"VirSorter_Readme.txt");
+my $readme_file        = catfile($data_dir,"VirSorter_Readme.txt");
 
 if ( $tag_virome == 1 ){
-    $readme_file = catfile($Bin,"VirSorter_Readme_viromes.txt");
+#    $readme_file = catfile($script_dir,"VirSorter_Readme_viromes.txt");
+    $readme_file = catfile($data_dir,"VirSorter_Readme_viromes.txt");
 }
 
-my $generic_ref_file = catfile($Bin,"Generic_ref_file.refs");
+# my $generic_ref_file = catfile($script_dir,"Generic_ref_file.refs");
+my $generic_ref_file = catfile($data_dir,"Generic_ref_file.refs");
 
 if ( $choice_database == 2 ) {
     $dir_Phage_genes    = catdir($data_dir, "Phage_gene_catalog_plus_viromes/");
@@ -126,7 +129,7 @@ my $db_PFAM_b = catfile($data_dir, "PFAM_27/Pfam-B.hmm");
 my $out = "";
 
 ## SETTING UP THE WORKING DIRECTORY
-my $log_dir = catdir($wdir, 'log');
+my $log_dir = catdir($wdir, 'logs');
 if (-d $log_dir) {
     $out = `rm -r $log_dir/* *.csv`;
     print "rm -r log* *.csv => $out\n";
@@ -401,10 +404,16 @@ mkpath($store_database_comparison);
 `mv $out_hmmsearch_pfama_bis $store_database_comparison/`;
 `mv $out_hmmsearch_pfamb $store_database_comparison/`;
 `mv $out_hmmsearch_pfamb_bis $store_database_comparison/`;
-`mv error.log logs/`;
-`mv formatdb.log logs/`;
-`mv log_err logs/Virsorter_error_log`;
-`mv log_out logs/Virsorter_stdout_log`;
+`mv error.log $log_dir`;
+`mv formatdb.log $log_dir`;
+my $final_error_log=catfile($log_dir,'Virsorter_stderr_log');
+`mv log_err $final_error_log`;
+# Then we clean error log to remove the ugly (and unnecessary) warning from BioPerl - Not needed anymore, we (i.e. Ken) figured out what was causing the warning (seq object had no id)
+# my $cmd_sed="sed -i '/Use of uninitialized value in concatenation (.) or string at \\/usr\\/local\\/lib\\/perl5\\/site_perl\\/5.22.0\\/Bio\\/SeqUtils.pm line 375.\$\/d' $final_error_log";
+# print "$cmd_sed\n";
+# `$cmd_sed`;
+my $final_out_log=catfile($log_dir,'Virsorter_stdout_log');
+`mv log_out $final_out_log`;
 # We put all the files linked to the metric computation in a new directory
 my $store_metric_files="Metric_files";
 mkpath($store_metric_files);
@@ -412,7 +421,7 @@ mkpath($store_metric_files);
 my $out_file_affi_ref  = $code_dataset . "_affi-contigs.refs";
 `mv $out_file_affi_ref $store_metric_files/`;
 `mv $out_file_phage_fragments $store_metric_files/VIRSorter_phage_signal.tab`;
-`mv $new_prots_to_cluster $store_metric_files/`;
+if (-e $new_prots_to_cluster){`mv $new_prots_to_cluster $store_metric_files/`;}
 # And we customize and add the readme file in the output directory
 my $datestring=localtime();
 my $local_readme_file="Readme.txt";
@@ -421,7 +430,7 @@ print $s1 "VirSorter parameters used :\n\n";
 print $s1 "--> Fasta file mined for viral sequences : $original_fna_file\n";
 print $s1 "--> Viral database used : ";
 if ($choice_database==2){print $s1 "Viromes : all bacterial and archaeal virus genomes in Refseq, as of January 2014, plus non-redundant predicted genes from viral metagenomes (including seawater, freshwater, and human-related samples)\n"}
-else{print $s1 "RefseqABVir (all bacterial and archaeal virus genomes in Refseq, as of January 2014\n";}
+else{print $s1 "RefseqABVir (all bacterial and archaeal virus genomes in Refseq, as of January 2014)\n";}
 if ($custom_phage eq ""){print $s1 "--> No custom reference sequence was added to the database\n";}
 else{print $s1 "--> Custom reference sequences from fasta file $custom_phage were added to the database\n";}
 if ($tag_virome==1){print $s1 "VirSorter was run with the in the 'Virome Decontamination' mode: overall metrics for microbial sequences were not evaluated from the complete dataset, but instead pre-computed values based on bacterial and archaeal genomes from Refseq were used."}

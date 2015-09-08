@@ -35,10 +35,15 @@ This is the Dockerfile for that:
 
     COPY SUP05_SAGs_with_viruses.fna /data/
 
+    COPY VirSorter_Readme.txt /data
+
+    COPY VirSorter_Readme_viromes.txt /data
+
     VOLUME ["/data"]
   
-Do a "docker build -t kyclark/virsorter-data ." with that, then:
+Then do:
 
+    $ docker build -t kyclark/virsorter-data .
     $ docker create --name virsorter-data kyclark/virsorter-data /bin/true
 
 ## Build
@@ -50,7 +55,7 @@ Do a "docker build -t kyclark/virsorter-data ." with that, then:
 A sample "run" command to use the current working directory for input/output:
 
     $ docker run --rm --volumes-from virsorter-data -v $(pwd):/de-app-work \
-    -w /de-app-work kyclark/virsorter --fasta Mic_1.fna
+    -w /de-app-work kyclark/virsorter --fna Mic_1.fna --db 1
 
 # Authors
 

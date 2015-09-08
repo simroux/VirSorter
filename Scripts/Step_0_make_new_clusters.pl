@@ -37,8 +37,6 @@ $blast_unclustered=~s/Pool_unclustered.faa/Blast_unclustered.tab/;
 
 my $path_to_formatdb = which("formatdb");
 my $path_to_blastal = which("blastall");
-#my $path_to_mcl_bin="/home/simroux/Utiles/Mcl_12_135/mcl-12-135/bin/";
-#my $path_to_mcl_bin="/usr/local/bin/Virsorter/Tools/mcl-12-135/";
 
 my $min_seq_in_a_cluster=3;
 
@@ -244,9 +242,16 @@ foreach(sort keys %clusters){
 	print S1 "\n//\n";
 	`$path_to_hmmbuild --amino $path_to_hmm $out_stokcholm`;
 }
-# on poole tous les hmm et les fasta, y compris les precedentes !
-$out=`cat $r_dir/clusts/*.hmm >> $r_dir/db/Pool_clusters.hmm`;
-print "cat new hmm : $out\n";
-# on en fait une base de données screenable par hmmscan
-$out=`$path_to_hmmpress $r_dir/db/Pool_clusters.hmm`;
-print "hmm press :$out\n";
+
+my @tab_hmm=<$r_dir/clusts/*.hmm>;
+if ($#tab_hmm>=0){
+	# we gather all hmm and fasta (if any)
+	$out=`cat $r_dir/clusts/*.hmm >> $r_dir/db/Pool_clusters.hmm`;
+	print "cat new hmm : $out\n";
+	# and create a new database for hmmsearch
+	$out=`$path_to_hmmpress $r_dir/db/Pool_clusters.hmm`;
+	print "hmm press :$out\n";
+}
+else{
+	$out=`touch $r_dir/db/Pool_clusters.hmm`;
+}
