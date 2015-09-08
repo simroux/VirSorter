@@ -17,10 +17,10 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 	die "\n";
 }
 
-my $affi_contigs=$ARGV[0];
-my $new_summary=$ARGV[1];
-my $global_summary=$ARGV[2];
-my $new_prot_list=$ARGV[3];
+my $affi_contigs   = $ARGV[0];
+my $new_summary    = $ARGV[1];
+my $global_summary = $ARGV[2];
+my $new_prot_list  = $ARGV[3];
 
 my %infos;
 my $tag=0;
@@ -28,7 +28,7 @@ my %check_prot_old;
 my %check_contig_old;
 if (-e $global_summary){
 	 # Get info from global_summary
-	open(SUM,"<$global_summary") || die ("pblm opening file $global_summary\n");
+	open SUM, '<', $global_summary;
 	while (<SUM>){
 		chomp($_);
 		if ($_=~/^## (\d+)/){
@@ -80,7 +80,7 @@ else{
 
 my %check_prot_new;
 my %check_contig_new;
-open(SUM,"<$new_summary") || die ("pblm opening file $new_summary\n");
+open SUM, '<', $new_summary;
 while (<SUM>){
 	chomp($_);
 	$_=~s/,/;/g;
@@ -186,7 +186,7 @@ foreach(sort {$a <=> $b } keys %infos){
 }
 
 
-open(S1,">$global_summary") || die ("pblm opening file $global_summary");
+open S1, '>', $global_summary;
 for (my $class=1;$class<=6;$class++){
 	if ($class==1){
 		print S1 "## 1 - Complete phage contigs - category 1 (pretty sure)\n";
@@ -229,7 +229,7 @@ close S1;
 # Check if they could be new clusters among the new proteins
 my @liste_to_add=();
 my $th_evalue=0.0000000001; # Big threshold, to prevent too much false positive
-open(AFI,"<$affi_contigs") || die ("pblm opening file $affi_contigs");
+open AFI, '<', $affi_contigs;
 my $contig_c="";
 while (<AFI>){
 	chomp($_);
@@ -262,7 +262,7 @@ while (<AFI>){
 if ($#liste_to_add>=0){
 	print "Listing the new prots to add\n";
 	my $l=join(",",@liste_to_add);
-	open(S2,">$new_prot_list") || die ("pblm opening file $new_prot_list\n");
+	open S2, '>', $new_prot_list;
 	print S2 "$l\n";
 	close S2;
 }

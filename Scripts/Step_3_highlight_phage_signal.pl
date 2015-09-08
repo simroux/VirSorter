@@ -17,12 +17,12 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 	die "\n";
 }
 $| = 1;
-my $csv_file=$ARGV[0];
-my $out_file=$ARGV[1];
-if (-e $out_file){`rm $out_file`;}
-my $ref_file=$ARGV[0];
-$ref_file=~s/\.csv/.refs/g;
-my $do_ref_estimation=0;
+my $csv_file = $ARGV[0];
+my $out_file = $ARGV[1];
+if ( -e $out_file ) { `rm $out_file`; }
+my $ref_file = $ARGV[0];
+$ref_file =~ s/\.csv/.refs/g;
+my $do_ref_estimation = 0;
 if (defined($ARGV[2])){
 #	$ref_file=$ARGV[2];
 	`cp $ARGV[2] $ref_file`; # That way, the ref file is in the result directory if a use wants to check it
@@ -42,7 +42,7 @@ my $script_dir= catfile($Bin, "Scripts");
 my $path_to_c_script= catfile($script_dir, "Sliding_windows_3");
 
 print "## Taking information from the contig info file ($csv_file)\n";
-open(F1,"<$csv_file") || die "pblm ouverture fichier $csv_file\n";
+open F1, '<', $csv_file;
 my $n=0;
 my $id_c=$_;
 my %infos;
@@ -97,7 +97,7 @@ my $th_gene_size=0;
 # WE HAVE A REF FILE, WE DONT ESTIMATE
 if ($do_ref_estimation==1){
 	print "## We have a ref file : $ref_file , so will use it\n";
-	open(F1,"<$ref_file") || die ("pblm opening file $ref_file\n");
+	open F1, '<', $ref_file;
 	while (<F1>){
 		chomp($_);
 		my @tab=split("\t",$_);
@@ -153,7 +153,7 @@ else{
 	$total{"switch"}/=$total{"n_obs"};
 	# Determine d1 (first decile) of the gene size distribution, so we divide the distribution in 10 parts
 	$th_gene_size=get_th_gene_size(\@store_avg_g_size,10);
-	open(S2,">$ref_file") || die ("pblm opening file $ref_file\n");
+	open S2, '>', $ref_file;
 	print S2 $total{"phage"}."\t".$total{"pfam"}."\t".$total{"unch"}."\t".$total{"switch"}."\t".$th_gene_size."\t".$total{"noncaudo"};
 	close S2;
 }
@@ -161,7 +161,7 @@ else{
 my $nb_gene_th=2;
 # Now the sliding windows
 print "## Then look at each contig and each sliding window\n";
-open(S1,">$out_file") || die ("pblm opening file $out_file\n");
+open S1, '>', $out_file;
 close S1;
 my $i=0;
 foreach(@liste_contigs){
@@ -176,7 +176,7 @@ foreach(@liste_contigs){
 	my $out_file_c3=$ref_file;
 	$out_file_c3=~s/\.refs/.out_$i-sorted/g;
 # 	print "we have $out_file_c $out_file_c2 $out_file_c3\n";
-	open(MAP_C,">$out_file_c") || die "pblm opening file $out_file_c\n";
+	open MAP_C, '>', $out_file_c;
 	print MAP_C "$nb_genes{$contig_c}\n";
 	my $last_strand="0";
 	my $total_hallmark=0;
@@ -206,6 +206,7 @@ foreach(@liste_contigs){
 	close MAP_C;
 	### Now go execute the C program
 	my $c_cmd="$path_to_c_script $ref_file $out_file_c $out_file_c2";
+    print "$c_cmd\n";
 	my $out=`$c_cmd`;
 # 	print "$out\n";
 	$c_cmd="sort -r -n -k 4 $out_file_c2 > $out_file_c3";
@@ -215,7 +216,7 @@ foreach(@liste_contigs){
 	my %match;
 	my %check;
 	my @check_gene;
-	open(OUT_C,"<$out_file_c3") || die ("pblm opening file $out_file_c3\n");
+	open OUT_C, '<', $out_file_c3;
 	while(<OUT_C>){
 		chomp($_);
 		my @tab=split("\t",$_);
@@ -424,7 +425,7 @@ foreach(@liste_contigs){
 			}
 			## END OF THE NEW ADDITION
 		}
-		open(S1,">>$out_file") || die ("pblm opening file $out_file\n");
+		open S1, '>>', $out_file;
 		foreach(sort { $merged_match{$b}{"size"} <=> $merged_match{$a}{"size"} } keys %merged_match){ ## IMPORTANT, HAVE TO BE SIZE ORDERED
 			my $fragment_id=$_;
 			$fragment_id=~/.*-(gene_\d+-gene_\d+)/;

@@ -2,6 +2,7 @@
 
 use strict;
 use autodie;
+
 # Script to generate the merged contig annotation (annotate each gene)
 # Argument 0 : MGA predict file
 # Argument 1 : HMMsearch vs Phage Clusters
@@ -23,20 +24,18 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 	die "\n";
 }
 
-
-my $mga_file=$ARGV[0];
-my $hmm_phage_clusters=$ARGV[1];
-my $blast_vs_unclustered=$ARGV[2];
-my $hmm_pfama=$ARGV[3];
-my $hmm_pfamb=$ARGV[4];
-my $ref_phage_clusters=$ARGV[5];
-my $out_file=$ARGV[6];
-
+my $mga_file             = $ARGV[0];
+my $hmm_phage_clusters   = $ARGV[1];
+my $blast_vs_unclustered = $ARGV[2];
+my $hmm_pfama            = $ARGV[3];
+my $hmm_pfamb            = $ARGV[4];
+my $ref_phage_clusters   = $ARGV[5];
+my $out_file             = $ARGV[6];
 
 my $circu_file=$mga_file;
 $circu_file=~s/_mga_final.predict/_circu.list/;
 my %circu;
-open(CI,"<$circu_file") || die "pblm ouverture fichier $circu_file\n";
+open CI, '<', $circu_file;
 while(<CI>){
 	chomp($_);
 	my @tab=split("\t",$_);
@@ -52,7 +51,7 @@ my %predict;
 my %type;
 my $id_c="";
 my @liste_contigs;
-open(MGA,"<$mga_file") || die ("pblm opening file $mga_file");
+open MGA, '<',  $mga_file;
 while(<MGA>){
 	chomp($_);
 	if ($_=~/^>(.*)/){
@@ -75,7 +74,7 @@ close MGA;
 my %affi_phage_cluster;
 my $score_blast_th=50;
 my $evalue_blast_th=0.001;
-open(BL,"<$blast_vs_unclustered") || die ("pblm opening file $blast_vs_unclustered");
+open BL, '<', $blast_vs_unclustered;
 while (<BL>){
 	chomp($_);
 	my @tab=split("\t",$_);
@@ -98,7 +97,7 @@ close BL;
 my $score_th=40;
 my $evalue_th=0.00001;
 
-open(TB,"<$hmm_phage_clusters") || die "pblm opening file $hmm_phage_clusters\n";
+open TB, '<', $hmm_phage_clusters;
 while(<TB>){
 	chomp($_);
 	if ($_=~m/^#/){
@@ -122,7 +121,7 @@ while(<TB>){
 close TB;
 
 my %affi_pfam;
-open(TB,"<$hmm_pfama") || die "pblm opening file $hmm_pfama\n";
+open TB, '<', $hmm_pfama;
 while(<TB>){
 	chomp($_);
 	if ($_=~m/^#/){
@@ -143,8 +142,7 @@ while(<TB>){
 }
 close TB;
 
-
-open(TB,"<$hmm_pfamb") || die "pblm opening file $hmm_pfamb\n";
+open TB, '<', $hmm_pfamb;
 while(<TB>){
 	chomp($_);
 	if ($_=~m/^#/){
@@ -167,7 +165,7 @@ close TB;
 
 
 my %phage_cluster;
-open(REF,"<$ref_phage_clusters") || die ("pblm opening file $ref_phage_clusters\n");
+open REF, '<', $ref_phage_clusters;
 while (<REF>){
 	chomp($_);
 	my @tab=split(/\|/,$_);
@@ -179,7 +177,7 @@ close REF;
 # Final output
 # >Contig,nb_genes,circularity
 # gene_id,start,stop,length,strand,affi_phage,score,evalue,category,affi_pfam,score,evalue,
-open(S1,">$out_file") || die ("pblm opening file $out_file\n");
+open S1, '>', $out_file;
 my $n=0;
 foreach(@liste_contigs){
 	$n++;

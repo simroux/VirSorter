@@ -7,8 +7,10 @@ use Bio::Seq;
 use Bio::SeqFeature::Generic;
 use Bio::Location::Simple;
 use Bio::Location::Split;
+use Cwd 'cwd';
 use File::Spec::Functions;
 use File::Path 'mkpath';
+
 # Script to get fasta file from VirSorter results
 # Argument 0 : code of the run
 if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[0])))
@@ -19,38 +21,55 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 }
 
 
-my $code=$ARGV[0];
-my $dir_out="Predicted_viral_sequences";
-mkpath($dir_out);
+my $code    = $ARGV[0] or die 'No code';
+my $wdir    = $ARGV[1] || cwd();
+my $dir_out = catdir($wdir, "Predicted_viral_sequences");
+
+unless (-d $dir_out) {
+    mkpath($dir_out);
+}
+
 # We decal each zone by 50 nt before and beyond
 my $decal=50;
 print "Code $code\n";
-my $out_file_1 = catfile($dir_out, $code ."_cat-1.fasta");
-my $out_file_2 = catfile($dir_out, $code."_cat-2.fasta");
-my $out_file_3 = catfile($dir_out, $code."_cat-3.fasta");
-my $out_file_p1 = catfile($dir_out, $code."_prophages_cat-4.fasta");
-my $out_file_p2 = catfile($dir_out, $code."_prophages_cat-5.fasta");
-my $out_file_p3 = catfile($dir_out, $code."_prophages_cat-6.fasta");
-my $gb_file_1 = catfile($dir_out, $code."_cat-1.gb");
-my $gb_file_2 = catfile($dir_out, $code."_cat-2.gb");
-my $gb_file_3 = catfile($dir_out, $code."_cat-3.gb");
-my $gb_file_p1 = catfile($dir_out, $code."_prophages_cat-4.gb");
-my $gb_file_p2 = catfile($dir_out, $code."_prophages_cat-5.gb");
-my $gb_file_p3 = catfile($dir_out, $code."_prophages_cat-6.gb");
-print "The sequences will be put in $out_file_1 / $out_file_2 / $out_file_3 / $out_file_p1 / $out_file_p2 / $out_file_p3\n";
-my $summary=$code."_global-phage-signal.csv";
-my $last_affi=$code."_phage-signal.csv";
-# my $mga_predict="fasta/".$code."_mga_final.predict";
-my $affi_contigs=$code."_affi-contigs.csv";
-my $fasta_contigs="fasta/".$code."_nett_filtered.fasta";
-# my $fasta_contigs="fasta/input_sequences.fna";
-my $fasta_prot="fasta/".$code."_prots.fasta";
+my $out_file_1  = catfile( $dir_out, $code . '_cat-1.fasta' );
+my $out_file_2  = catfile( $dir_out, $code . '_cat-2.fasta' );
+my $out_file_3  = catfile( $dir_out, $code . '_cat-3.fasta' );
+my $out_file_p1 = catfile( $dir_out, $code . '_prophages_cat-4.fasta' );
+my $out_file_p2 = catfile( $dir_out, $code . '_prophages_cat-5.fasta' );
+my $out_file_p3 = catfile( $dir_out, $code . '_prophages_cat-6.fasta' );
+my $gb_file_1   = catfile( $dir_out, $code . '_cat-1.gb' );
+my $gb_file_2   = catfile( $dir_out, $code . '_cat-2.gb' );
+my $gb_file_3   = catfile( $dir_out, $code . '_cat-3.gb' );
+my $gb_file_p1  = catfile( $dir_out, $code . '_prophages_cat-4.gb' );
+my $gb_file_p2  = catfile( $dir_out, $code . '_prophages_cat-5.gb' );
+my $gb_file_p3  = catfile( $dir_out, $code . '_prophages_cat-6.gb' );
+print join("\n", "The sequences will be put in:",
+    ( map { " - $_" } 
+        $out_file_1,
+        $out_file_2,
+        $out_file_3,
+        $out_file_p1,
+        $out_file_p2,
+        $out_file_p3,
+    ),
+    ''
+);
+
+my $summary       = catfile($wdir, $code . '_global-phage-signal.csv');
+my $last_affi     = catfile($wdir, $code . '_phage-signal.csv');
+my $affi_contigs  = catfile($wdir, $code . '_affi-contigs.csv');
+my $fasta_contigs = catfile($wdir, 'fasta', $code . '_nett_filtered.fasta');
+my $fasta_prot    = catfile($wdir, 'fasta', $code . '_prots.fasta');
+
+print "Checking '$last_affi'\n";
 
 if (-e $last_affi){
 	my %compte=(1=>0,2=>0,3=>0,4=>0,5=>0,6=>0);
 	my %check;
 	my $current_c="";
-	open(SUM,"<$summary") || die ("pblm opening file $summary\n");
+	open(SUM, '<', $summary);
+
 	while (<SUM>){
 		chomp($_);
 		if ($_=~/## (\d)/){$current_c=$1;}
@@ -163,7 +182,7 @@ if (-e $last_affi){
 	my $output_p3 = Bio::SeqIO->new(-file => ">$gb_file_p3",-format => 'GenBank');
 	my $sequence=0;
 	open(FASTA,"<$fasta_contigs") || die ("pblm opening file $fasta_contigs\n");
-	my $id_c="";
+	$id_c="";
 	my $seq_c="";
 	while (<FASTA>){
 		chomp($_);

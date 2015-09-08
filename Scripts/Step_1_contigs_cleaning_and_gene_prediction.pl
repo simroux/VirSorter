@@ -3,6 +3,7 @@
 use strict;
 use autodie;
 use Bio::Seq;
+use File::Spec::Functions;
 use File::Which 'which';
 
 # Script to detect circular contigs, nett sequences, and predict genes with mga
@@ -17,19 +18,16 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 	die "\n";
 }
 
+my $id                = $ARGV[0];
+my $tmp_dir           = $ARGV[1];
+my $fasta_contigs     = $ARGV[2];
+my $th_nb_genes       = $ARGV[3];
+my $path_to_mga       = which('mga_linux_ia64');
+my $in_file           = catfile($tmp_dir, $id . "_nett.fasta");
+my $circu_file        = catfile($tmp_dir, $id . "_circu.list");
+my $out_special_circu = catfile($tmp_dir, $id . "_contigs_circu_temp.fasta");
 
-my $id=$ARGV[0];
-my $tmp_dir=$ARGV[1];
-my $fasta_contigs=$ARGV[2];
-my $th_nb_genes=$ARGV[3];
-
-my $path_to_mga = which('mga_linux_ia64');
-
-my $in_file=$tmp_dir."/".$id."_nett.fasta";
-my $circu_file=$tmp_dir."/".$id."_circu.list";
-my $out_special_circu=$tmp_dir."/".$id."_contigs_circu_temp.fasta";
-
-open(F1,"<$fasta_contigs") || die "pblm ouverture fichier $fasta_contigs\n";
+open F1, '<', $fasta_contigs;
 my %seq_base;
 my $id_seq="";
 while(<F1>){
@@ -48,8 +46,9 @@ my $n1=0;
 
 open S1, '>', $in_file;
 open S2, '>', $circu_file;
-foreach(sort {length($seq_base{$b}) <=> length($seq_base{$a})} keys %seq_base){
-	my $id_contig=$_;
+for my $id_contig (
+    sort {length($seq_base{$b}) <=> length($seq_base{$a})} keys %seq_base
+){
 	$order_contig{$id_contig}=$n1;
 	$n1++;
 	my $s=$seq_base{$id_contig};
@@ -87,7 +86,7 @@ my $mga=`$path_to_mga $in_file -m > $out_file`;
 my $out_file_circu="";
 my %circu;
 if (-e $circu_file){
-	open(CI,"<$circu_file") || die "pblm ouverture fichier $circu_file\n";
+	open CI, '<', $circu_file;
 	while(<CI>){
 		chomp($_);
 		my @tab=split("\t",$_);
@@ -95,7 +94,7 @@ if (-e $circu_file){
 		$circu{$id_c}=1;
 	}
 	close CI;
-	open(S2,">$out_special_circu") || die "pblm ouverture fichier $out_special_circu\n";
+	open S2, '>', $out_special_circu;
 	my $long=1000; # we cp the 1000 first bases to the end of the contig
 	my $seuil_long=1000;
 	my $n_circu=0;
@@ -118,7 +117,7 @@ if (-e $circu_file){
 # Mix 'n match of the two results of gene prediction
 my %order_gene;
 my $n2=0;
-open(RESU,"<$out_file")  || die "pblm ouverture fichier $out_file\n";
+open RESU, '<', $out_file;
 my %predict;
 my %type;
 my $id_c="";
@@ -138,7 +137,7 @@ while(<RESU>){
 }
 close RESU;
 if (-e $circu_file){
-	open(CIR,"<$out_file_circu") || die "pblm ouverture fichier $out_file_circu\n";
+	open CIR, '<', $out_file_circu;
 	my $tag=0;
 	while(<CIR>){
 		chomp($_);
@@ -251,9 +250,10 @@ if (-e $circu_file){
 my $final_file=$tmp_dir."/".$id."_nett_filtered.fasta";
 my $out_final=$tmp_dir."/".$id."_mga_final.predict";
 my $prot_file=$tmp_dir."/".$id."_prots.fasta";
-open(FNA,">$final_file") || die "pblm opening file $final_file\n";
-open(SF,">$out_final") || die "pblm ouverture fichier $out_final\n";
-open(PROT,">$prot_file") || die "pblm ouverture fichier $prot_file\n";
+
+open FNA,  '>', $final_file;
+open SF,   '>', $out_final;
+open PROT, '>', $prot_file;
 my $n=0;
 foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 	$n++;
@@ -308,13 +308,13 @@ foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 				$predict{$id}{$_}=$new_line;
 			}
 			print SF "$predict{$id}{$_}\n";
-			my @tab=split("\t",$predict{$id}{$_});
-			my $name=$tab[0];
-			my $start=$tab[1];
-			my $stop=$tab[2];
-			my $sens=$tab[3];
-			my $frame=$tab[4];
-			my $frag="";
+			@tab=split("\t",$predict{$id}{$_});
+            my $name  = $tab[0];
+            my $start = $tab[1];
+            my $stop  = $tab[2];
+            my $sens  = $tab[3];
+            my $frame = $tab[4];
+            my $frag  = "";
 			# Cas "normal" (on chevauche pas l'origine)
 			if ($start<$stop){
 				my $long=$stop-$start+1;
