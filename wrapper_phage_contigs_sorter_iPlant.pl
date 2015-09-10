@@ -131,8 +131,10 @@ my $out = "";
 ## SETTING UP THE WORKING DIRECTORY
 my $log_dir = catdir($wdir, 'logs');
 if (-d $log_dir) {
-    $out = `rm -r $log_dir/* *.csv`;
-    print "rm -r log* *.csv => $out\n";
+## Commented on iPlant, but can be useful when running VirSorter on a directory already processed 
+## (to avoid recomputing the gene prediction and comparison to PFAM especially)
+#    $out = `rm -r $log_dir/* *.csv`; 
+#    print "rm -r log* *.csv => $out\n";
 } 
 else {
     mkpath($log_dir);
