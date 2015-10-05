@@ -2,7 +2,22 @@
 
 Source code of the VirSorter App, available on iPlant (https://de.iplantcollaborative.org/de/)
 
-# Dependencies
+# Docker - from DockerHub
+
+* Download the databases required by VirSorter, available as a tarball archive on iMicrobe: http://mirrors.iplantcollaborative.org/browse/iplant/home/shared/imicrobe/VirSorter/virsorter-data.tar.gz
+* Untar this package in a directory, e.g. /host/path/to/virsorter-data
+* Pull VirSorter from dockerhub: docker pull –tag="v1.0.3" virsorter
+* Create a working directory for VirSorter which includes the input fasta file, e.g. /host/path/to/virsorter-run
+* Then run VirSorter from docker, mounting the data directory as data, and the run directory as wdir:
+docker run -v /host/path/to/virsorter-data:/data -v /host/path/to/virsorter-run:/wdir -w /wdir --rm discoenv/virsorter:v1.0.3 --db 2 --fna /wdir/Input_contigs.fna
+
+After "virsorter:v1.0.3", the options correspond to the ones described in wrapper_phage_contigs_sorter_iPlant.pl (here selecting the database "Viromes" and poiting VirSorter to the file "Input_contigs.fna").
+
+
+# Docker - building packages from scratch
+
+
+## Dependencies
 
 Install the following into a "bin" directory:
 
@@ -12,7 +27,6 @@ Install the following into a "bin" directory:
 * MUSCLE (http://www.drive5.com/muscle/)
 * BLAST (ftp://ftp.ncbi.nlm.nih.gov/blast/executables/release/LATEST/, not BLAST+)
 
-# Docker
 
 ## Data Container
 
