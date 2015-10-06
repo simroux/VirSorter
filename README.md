@@ -6,7 +6,7 @@ Source code of the VirSorter App, available on iPlant (https://de.iplantcollabor
 
 * Download the databases required by VirSorter, available as a tarball archive on iMicrobe: http://mirrors.iplantcollaborative.org/browse/iplant/home/shared/imicrobe/VirSorter/virsorter-data.tar.gz
 * Untar this package in a directory, e.g. /host/path/to/virsorter-data
-* Pull VirSorter from dockerhub: $ docker pull --tag="v1.0.3" virsorter
+* Pull VirSorter from dockerhub: $ docker pull discoenv/virsorter:v1.0.3
 * Create a working directory for VirSorter which includes the input fasta file, e.g. /host/path/to/virsorter-run
 * Then run VirSorter from docker, mounting the data directory as data, and the run directory as wdir:
 
