@@ -327,11 +327,11 @@ if (-e $last_affi){
 			$tab[0]=~s/\]/_/g;
 			$tab[2]=~s/\[/_/g;
 			$tab[2]=~s/\]/_/g;
-			# $tab[2]=~s/-circular//g;
+#			$tab[2]=~s/-circular//g;
 			my $desc="Putative phage sequence (category $check{$id_c}{$_}{category}), predicted by PhageSorter";
 			my $iscirc=0;
 			if ($check{$id_c}{$tab[2]}{"circular"}==1){
-				# $id_red.="-circ";
+#				$id_red.="-circ";
 				$iscirc=1;
 			}
 			if ($check{$id_c}{$_}{"category"}<=3){

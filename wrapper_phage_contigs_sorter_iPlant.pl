@@ -1,11 +1,17 @@
 #!/usr/bin/env perl
 
-=head1 USAGE 
-
-  ./wrapper_phage_contigs_sorter_iPlant.pl -d Code_dataset --fna Fasta file of contigs --db 1 --wdir /path/to/working_directory
-  Database codes : 1 for RefseqABVir only, 2 for RefseqABVir + Viromes
-  An additional set of reference sequences can be added to the database as a fasta file with the argument cp (--cp /path/to/fasta_file)
-  
+=head1 SYNOPSIS
+  wrapper_phage_contigs_sorter_iPlant.pl --fasta sequences.fa
+Required Arguments:
+  -f|--fna     Fasta file of contigs
+Options: 
+  -d|--dataset   Code dataset (DEFAULT "VIRSorter")
+  -cp     Custom phage sequence 
+  --db           Either "1" (DEFAULT Refseqdb) or "2" (Viromedb)
+  --wdir         Working directory (DEFAULT cwd)
+  --help         Show help and exit
+=head1 DESCRIPTION
+Wrapper for detection of viral contigs
 =cut
 
 use strict;
@@ -51,6 +57,7 @@ unless ($choice_database == 1 || $choice_database == 2) {
     pod2usage('choice_database must be 1 or 2');
 }
 
+<<<<<<< Updated upstream
 print join("\n",
     "Dataset      : $code_dataset", 
     "Fna file     : $original_fna_file", 
@@ -75,8 +82,10 @@ print join("\n",
 #	}
 #}
 
-if ($tag_virome) {
-	print "!!! THIS WILL BE A VIROME DECONTAMINATION RUN\n";
+print "Dataset : $code_dataset, Fna file : $original_fna_file, Db : $choice_database, Wdir : $wdir, Custom phages : $custom_phage\n";
+
+if($tag_virome==1){
+	print "WARNING: THIS WILL BE A VIROME DECONTAMINATION RUN\n";
 }
 
 # Need 2 databases
@@ -85,12 +94,6 @@ if ($tag_virome) {
 
 my $n_cpus = 8;
 
-# my $code_dataset      = $ARGV[0];
-# my $original_fna_file = $ARGV[1];
-# my $choice_database   = $ARGV[2];
-# my $wdir              = $ARGV[3];
-# my $custom_phage      = "";
-# if ( defined( $ARGV[4] ) ) { $custom_phage = $ARGV[4]; }
 print "#%#%#%#%#%# Processing $code_dataset....\n";
 my $microbial_base_needed = 0;
 ## replace this directory with the iPlant dir
@@ -116,6 +119,7 @@ if ( $tag_virome == 1 ){
 
 # my $generic_ref_file = catfile($script_dir,"Generic_ref_file.refs");
 my $generic_ref_file = catfile($data_dir,"Generic_ref_file.refs");
+
 
 if ( $choice_database == 2 ) {
     $dir_Phage_genes    = catdir($data_dir, "Phage_gene_catalog_plus_viromes/");

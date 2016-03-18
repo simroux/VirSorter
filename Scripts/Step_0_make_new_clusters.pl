@@ -24,6 +24,11 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 my $path_to_blastall = which("blastall");
 my $MCX_LOAD         = which("mcxload");
 my $MCL              = which("mcl");
+my $path_to_formatdb = which("formatdb");
+my $path_to_blastal = which("blastall");
+my $path_to_muscle= which("muscle");
+my $path_to_hmmbuild= which("hmmbuild");
+my $path_to_hmmpress= which("hmmpress");
 
 my $r_dir=$ARGV[0];
 $r_dir=~/(r_\d*)\/?$/;
@@ -31,19 +36,10 @@ my $r_number=$1;
 print "Revision $r_number\n";
 my $fasta_prot_contigs=$ARGV[1];
 my $fasta_prot_unclustered=$ARGV[2];
-my $liste=$ARGV[3];
 my $blast_unclustered=$fasta_prot_unclustered;
 $blast_unclustered=~s/Pool_unclustered.faa/Blast_unclustered.tab/;
-
-my $path_to_formatdb = which("formatdb");
-my $path_to_blastal = which("blastall");
-
+my $liste=$ARGV[3];
 my $min_seq_in_a_cluster=3;
-
-my $path_to_muscle= which("muscle");
-my $path_to_hmmbuild= which("hmmbuild");
-my $path_to_hmmpress= which("hmmpress");
-
 
 my %check;
 open(LI,"<$liste") || die ("pblm opening liste $liste\n");
