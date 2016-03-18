@@ -39,6 +39,7 @@ my $fasta_prot_unclustered=$ARGV[2];
 my $blast_unclustered=$fasta_prot_unclustered;
 $blast_unclustered=~s/Pool_unclustered.faa/Blast_unclustered.tab/;
 my $liste=$ARGV[3];
+my $liste=$ARGV[3];
 my $min_seq_in_a_cluster=3;
 
 my %check;

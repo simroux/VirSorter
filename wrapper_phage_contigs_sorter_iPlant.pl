@@ -35,7 +35,7 @@ my $data_dir          = '/data';
 my $wdir              = cwd();
 
 GetOptions(
-   'fna=s'       => \$original_fna_file,
+   'f|fna=s'       => \$original_fna_file,
    'd|dataset:s' => \$code_dataset,
    'db:i'        => \$choice_database,
    'virome:i'    => \$tag_virome,
@@ -46,7 +46,7 @@ GetOptions(
 );
 
 if ($help) {
-   pod2usage();
+    pod2usage();
 }
 
 unless ($original_fna_file) {
@@ -56,31 +56,6 @@ unless ($original_fna_file) {
 unless ($choice_database == 1 || $choice_database == 2) {
     pod2usage('choice_database must be 1 or 2');
 }
-
-<<<<<<< Updated upstream
-print join("\n",
-    "Dataset      : $code_dataset", 
-    "Fna file     : $original_fna_file", 
-    "Db           : $choice_database", 
-    "Wdir         : $wdir", 
-    "Custom phages: $custom_phage",
-    ''
-);
-
-#
-# This code does nothing useful.
-#
-# We check if the custom phage is an actual fasta file, or if it's the working dir (which means -> no custom phage).
-#if ($custom_phage=~/.*\.f.*/){}
-#else{
-#	if($wdir=~/.*\/$custom_phage$/){
-#		print "The custom phage is actually the wdir id, so we remove it\n";
-#		$custom_phage="";
-#	}
-#	else{
-#		die("we do not understand this custom phage : $custom_phage");
-#	}
-#}
 
 print "Dataset : $code_dataset, Fna file : $original_fna_file, Db : $choice_database, Wdir : $wdir, Custom phages : $custom_phage\n";
 
@@ -96,8 +71,6 @@ my $n_cpus = 8;
 
 print "#%#%#%#%#%# Processing $code_dataset....\n";
 my $microbial_base_needed = 0;
-## replace this directory with the iPlant dir
-#my $wdir=$wdir."/".$code_dataset."/";
 
 my $path_to_mga        = which('mga_linux_ia64');
 my $path_hmmsearch     = which('hmmsearch');
@@ -206,9 +179,6 @@ if ( !( -e $out_hmmsearch_pfamb ) ) {
     $out = `$cmd_hmm_pfamb`;
     print "\t$out\n";
 }
-else { 
-    $out = "Already a results for PFAM B .. skipping (the great guru)\n"; 
-}
 
 # Now work on the phage gene catalog
 
@@ -248,9 +218,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
     my $dir_revision = "r_" . $r_n;
     print "### Revision $r_n\n";
     if ( !-d $dir_revision ) {
-        ## mkdir de la db de cette revision
-        #print "mkdir $dir_revision >> $log_out 2>> $log_err\n";
-        #$out=`mkdir $dir_revision >> $log_out 2>> $log_err`;
+        ## mkdir for this revision
         mkpath($dir_revision);
         print "Out : $out\n";
         ## Clustering of the new prots with the unclustered
@@ -259,7 +227,6 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         if ( $r_n == 0 ) {
             #`mkdir $dir_revision/db`;
             mkpath( catdir( $dir_revision, 'db' ) );
-
             ## Adding custom sequences to the database if required by the user
             if ( $custom_phage ne "" ) {
                 my $script_custom_phage = catfile($script_dir,"Step_first_add_custom_phage_sequence.pl");
@@ -295,11 +262,11 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         my $check = 0;
         open my $DB, '<', $new_db_profil;
         while (<$DB>) {
-	    chomp($_);
-            if ( $_ =~ /^NAME/ ) { 
-		$check++; 
-		# print "there is a cluster $_ in the database, so we're good\n"; 
-	    }
+			chomp($_);
+			if ( $_ =~ /^NAME/ ) { 
+				$check++; 
+				# print "there is a cluster $_ in the database, so we're good\n"; 
+			}
         }
         close $DB;
         if ( $check == 0 ) {
@@ -414,10 +381,6 @@ mkpath($store_database_comparison);
 `mv formatdb.log $log_dir`;
 my $final_error_log=catfile($log_dir,'Virsorter_stderr_log');
 `mv log_err $final_error_log`;
-# Then we clean error log to remove the ugly (and unnecessary) warning from BioPerl - Not needed anymore, we (i.e. Ken) figured out what was causing the warning (seq object had no id)
-# my $cmd_sed="sed -i '/Use of uninitialized value in concatenation (.) or string at \\/usr\\/local\\/lib\\/perl5\\/site_perl\\/5.22.0\\/Bio\\/SeqUtils.pm line 375.\$\/d' $final_error_log";
-# print "$cmd_sed\n";
-# `$cmd_sed`;
 my $final_out_log=catfile($log_dir,'Virsorter_stdout_log');
 `mv log_out $final_out_log`;
 # We put all the files linked to the metric computation in a new directory

@@ -230,10 +230,3 @@ foreach(@liste_contigs){
 	}
 }
 close $s1;
-
-
-
-
-
-
-
