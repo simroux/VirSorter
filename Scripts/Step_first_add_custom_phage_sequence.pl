@@ -21,16 +21,15 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 }
 
 
-my $virsorter_dir    = "/usr/local/bin/Virsorter/";
-my $path_to_formatdb = which("formatdb");
-my $path_to_blastall = which("blastall");
-my $path_to_muscle   = which("muscle");
-my $path_to_hmmbuild = which("hmmbuild");
-my $path_to_hmmpress = which("hmmpress");
-my $path_hmmsearch   = which("hmmsearch");
-my $path_to_mga      = which("mga_linux_ia64");
-my $MCX_LOAD         = which("mcxload");
-my $MCL              = which("mcl");
+my $path_to_makeblastdb = which("makeblastdb")    or die "No makeblastdb\n";
+my $path_to_blastp      = which("blastp")         or die "No blastp\n";
+my $path_to_muscle      = which("muscle")         or die "No muscle\n";
+my $path_to_hmmbuild    = which("hmmbuild")       or die "No hmmbuild\n";
+my $path_to_hmmpress    = which("hmmpress")       or die "No hmmpress\n";
+my $path_hmmsearch      = which("hmmsearch")      or die "No hmmsearch\n";
+my $path_to_mga         = which("mga_linux_ia64") or die "No mga\n";
+my $MCX_LOAD            = which("mcxload")        or die "No mcxloafd\n";
+my $MCL                 = which("mcl")            or die "No mcl\n";
 
 my $min_seq_in_a_cluster=3;
 my $n_cpus=8;
@@ -211,7 +210,7 @@ close PROT;
 close NEWPROT;
 # - 3 - and make new clusters
 my $db=$tmp_dir."Custom_phages_mga_prots-to-cluster";
-my $cmd_format="$path_to_formatdb -i $prot_file_to_cluster -n $db";
+my $cmd_format="$path_to_makeblastdb -in $prot_file_to_cluster";# -n $db";
 print "$cmd_format\n";
 my $out=`$cmd_format`;
 print "Formatdb : $out\n";
@@ -221,7 +220,7 @@ $out=`$cmd_cat`;
 print "Cat : $cmd_cat\n";
 #     - blast vs themselves and the unclustered
 my $out_blast=$tmp_dir."pool_unclustered-and-custom-phages-vs-custom-phages.tab";
-my $cmd_blast="$path_to_blastall -p blastp -i $prot_file_to_cluster -d $db -o $out_blast -m 8 -a 10 -e 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
+my $cmd_blast="$path_to_blastp -queury $prot_file_to_cluster -db $db -out $out_blast -outfmt 6 -num_threads 10 -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
 print "$cmd_blast\n";
 $out=`$cmd_blast`;
 print "Blast : $out\n";
@@ -323,7 +322,7 @@ foreach(keys %unclustered){
 }
 close S1;
 print "making a blastable db from the new unclustered\n";
-$out=`$path_to_formatdb -i $final_pool_unclustered -n $final_blastable_unclustered`;
+$out=`$path_to_makeblastdb -in $final_pool_unclustered";# -n $final_blastable_unclustered`;
 # on réduit aussi le fichier blast qu'on ajoute au blast des unclustered
 open(BL,"<$out_blast") || die "pblm ouverture fichier $out_blast\n";
 open(S1,">$final_blast_unclustered") || die "pblm ouverture fichier $final_blast_unclustered\n";

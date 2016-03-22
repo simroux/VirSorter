@@ -21,14 +21,13 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 	die "\n";
 }
 
-my $path_to_blastall = which("blastall");
-my $MCX_LOAD         = which("mcxload");
-my $MCL              = which("mcl");
-my $path_to_formatdb = which("formatdb");
-my $path_to_blastal = which("blastall");
-my $path_to_muscle= which("muscle");
-my $path_to_hmmbuild= which("hmmbuild");
-my $path_to_hmmpress= which("hmmpress");
+my $path_to_blastp      = which("blastp")      or die "No blastp\n";
+my $MCX_LOAD            = which("mcxload")     or die "No mcxload\n";
+my $MCL                 = which("mcl")         or die "No mcl\n";
+my $path_to_muscle      = which("muscle")      or die "No muscle\n";
+my $path_to_hmmbuild    = which("hmmbuild")    or die "No hmmbuild\n";
+my $path_to_hmmpress    = which("hmmpress")    or die "No hmmpress\n";
+my $path_to_makeblastdb = which("makeblastdb") or die "No makeblastdb\n";
 
 my $r_dir=$ARGV[0];
 $r_dir=~/(r_\d*)\/?$/;
@@ -73,17 +72,17 @@ close FA;
 close S1;
 
 my $db= catfile($r_dir, "pool_new_proteins");
-my $cmd_format="$path_to_formatdb -i $pool_new -n $db";
+my $cmd_format="$path_to_makeblastdb -dbtype prot -in $pool_new"; # -n $db";
 print "$cmd_format\n";
 my $out=`$cmd_format`;
-print "Formatdb : $out\n";
+print "makeblastdb : $out\n";
 my $cmd_cat="cat $fasta_prot_unclustered >> $pool_new";
 print "$cmd_cat\n";
 $out=`$cmd_cat`;
 print "Cat : $cmd_cat\n";
 # BLAST des unclustered et des new contre les new
 my $out_blast=catfile($r_dir, "pool_unclustered-and-new-proteins-vs-new-proteins.tab");
-my $cmd_blast="$path_to_blastall -p blastp -i $pool_new -d $db -o $out_blast -m 8 -a 10 -e 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
+my $cmd_blast="$path_to_blastp -query $pool_new -db $db -out $out_blast -outfmt 6 -num_threads 10 -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
 print "$cmd_blast\n";
 $out=`$cmd_blast`;
 print "Blast : $out\n";
@@ -193,7 +192,7 @@ foreach(keys %unclustered){
 close S1;
 close S2;
 print "making a blastable db from the new unclustered\n";
-$out=`$path_to_formatdb -i $pool_new_unclustered -n $blastable_new_unclustered`;
+$out=`$path_to_makeblastdb -dbtype prot -in $pool_new_unclustered`;# -n $blastable_new_unclustered`;
 # on réduit aussi le fichier blast qu'on ajoute au blast des unclustered
 open(BL,"<$out_blast") || die "pblm ouverture fichier $out_blast\n";
 open(S1,">$blast_unclustered") || die "pblm ouverture fichier $blast_unclustered\n";

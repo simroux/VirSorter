@@ -14,6 +14,8 @@ Options:
   --cp           Custom phage sequence 
   --db           Either "1" (DEFAULT Refseqdb) or "2" (Viromedb)
   --wdir         Working directory (DEFAULT cwd)
+  --ncpu         Number of CPUs
+
   --help         Show help and exit
 
 =head1 DESCRIPTION
@@ -41,6 +43,7 @@ my $choice_database = '';
 my $tag_virome      = 0;
 my $custom_phage    = '';
 my $data_dir        = '/data';
+my $n_cpus          = 16;
 my $wdir            = cwd();
 
 GetOptions(
@@ -51,6 +54,7 @@ GetOptions(
    'wdir:s'      => \$wdir,
    'cp:s'        => \$custom_phage,
    'data-dir:s'  => \$data_dir,
+   'ncpu:i'      => \$n_cpus,
    'h|help'      => \$help,
 );
 
@@ -83,21 +87,13 @@ if ($tag_virome == 1) {
 # PCs from Refseq (phages) or PCs from Refseq+Viromes
 # PFAM (26.0)
 
-my $n_cpus = 8;
-
-print "#%#%#%#%#%# Processing $code_dataset....\n";
-my $microbial_base_needed = 0;
-
-my $path_to_mga        = which('mga_linux_ia64') 
-                         or die "Missing mga_linux_ia64\n";
 my $path_hmmsearch     = which('hmmsearch') or die "Missing hmmsearch\n";
-my $path_blastall      = which('blastall')  or die "Missing blastall\n";
-my $path_to_formatdb   = which('formatdb')  or die "Missing formatdb";
+my $path_blastp        = which('blastp')    or die "Missing blastp\n";
 my $script_dir         = catdir($Bin, 'Scripts');
 my $dir_Phage_genes    = catdir($data_dir,'Phage_gene_catalog');
+my $readme_file        = catfile($data_dir, 'VirSorter_Readme.txt');
 my $ref_phage_clusters = catfile($data_dir,
                          'Phage_gene_catalog', 'Phage_Clusters_current.tab');
-my $readme_file        = catfile($data_dir, 'VirSorter_Readme.txt');
 
 if ($tag_virome == 1) {
     $readme_file = catfile($data_dir, 'VirSorter_Readme_viromes.txt');
@@ -305,25 +301,28 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
             # Rm the list of prots to be clustered now that they should be
             # clustered
             $out = `rm $new_prots_to_cluster`;
-            print "rm $new_prots_to_cluster -> $out\n";
+            #print "rm $new_prots_to_cluster -> $out\n";
         }
 
         # Check if there are some data in these new clusters, or if all the new
         # proteins are unclustered
         my $new_db_profil = catfile($dir_revision, 'db', 'Pool_clusters.hmm');
         my $check = 0;
-        open my $DB, '<', $new_db_profil;
 
-        while (<$DB>) {
-            chomp($_);
-            if ( $_ =~ /^NAME/ ) { 
-                $check++; 
+        if (-s $new_db_profil) {
+            open my $DB, '<', $new_db_profil;
+
+            while (<$DB>) {
+                chomp($_);
+                if ( $_ =~ /^NAME/ ) { 
+                    $check++; 
+                }
             }
+            close $DB;
         }
-        close $DB;
 
         if ($check == 0) {
-            print "There is no clusters in the database, " .
+            print "There are no clusters in the database, " .
                   "so we skip the hmmsearch\n";
         }
         else {
@@ -357,9 +356,13 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
           catfile( $dir_revision, 'db', 'Pool_new_unclustered' );
 
         my $cmd_blast_unclustered = join(' ',
-            "$path_blastall -p blastp -i $fasta_file_prots -d",
-            "$blastable_unclustered -o $out_blast_new_unclustered -a $n_cpus", 
-            "-m 8 -e 0.001 >> $log_out 2>> $log_err"
+            $path_blastp,
+            "-query $fasta_file_prots",
+            "-db $blastable_unclustered",
+            "-out $out_blast_new_unclustered",
+            "-num_threads $n_cpus", 
+            "-outfmt 6",
+            "-evalue 0.001 >> $log_out 2>> $log_err"
         );
 
         print "\nStep 1.3 : $cmd_blast_unclustered\n";
