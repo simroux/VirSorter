@@ -20,7 +20,6 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 	die "\n";
 }
 
-
 my $path_to_makeblastdb = which("makeblastdb")    or die "No makeblastdb\n";
 my $path_to_blastp      = which("blastp")         or die "No blastp\n";
 my $path_to_muscle      = which("muscle")         or die "No muscle\n";
@@ -210,7 +209,7 @@ close PROT;
 close NEWPROT;
 # - 3 - and make new clusters
 my $db=$tmp_dir."Custom_phages_mga_prots-to-cluster";
-my $cmd_format="$path_to_makeblastdb -in $prot_file_to_cluster";# -n $db";
+my $cmd_format="$path_to_makeblastdb -in $prot_file_to_cluster -title $db";
 print "$cmd_format\n";
 my $out=`$cmd_format`;
 print "Formatdb : $out\n";
@@ -322,7 +321,7 @@ foreach(keys %unclustered){
 }
 close S1;
 print "making a blastable db from the new unclustered\n";
-$out=`$path_to_makeblastdb -in $final_pool_unclustered";# -n $final_blastable_unclustered`;
+$out=`$path_to_makeblastdb -in $final_pool_unclustered -title $final_blastable_unclustered`;
 # on réduit aussi le fichier blast qu'on ajoute au blast des unclustered
 open(BL,"<$out_blast") || die "pblm ouverture fichier $out_blast\n";
 open(S1,">$final_blast_unclustered") || die "pblm ouverture fichier $final_blast_unclustered\n";
