@@ -93,8 +93,6 @@ my $path_to_mga        = which('mga_linux_ia64')
 my $path_hmmsearch     = which('hmmsearch') or die "Missing hmmsearch\n";
 my $path_blastall      = which('blastall')  or die "Missing blastall\n";
 my $path_to_formatdb   = which('formatdb')  or die "Missing formatdb";
-my $log_out            = catfile($wdir, 'log_out');
-my $log_err            = catfile($wdir, 'log_err');
 my $script_dir         = catdir($Bin, 'Scripts');
 my $dir_Phage_genes    = catdir($data_dir,'Phage_gene_catalog');
 my $ref_phage_clusters = catfile($data_dir,
@@ -129,6 +127,8 @@ if (-d $log_dir) {
 else {
     mkpath($log_dir);
 }
+my $log_out = catfile($log_dir, 'log_out');
+my $log_err = catfile($log_dir, 'log_err');
 
 # cp fasta file in the wdir
 my $fastadir = catdir($wdir, 'fasta');
@@ -437,7 +437,7 @@ print "Cleaning the output directory\n";
 # We rm the first db to not overload user disk space
 my $db_revision_0 = catdir($wdir, 'r_0', 'db');
 if (-d $db_revision_0) {
-    $out=`rm -r $db_revision_0`;
+    $out = `rm -r $db_revision_0`;
     print "rm -r $db_revision_0 : $out\n";
 }
 
