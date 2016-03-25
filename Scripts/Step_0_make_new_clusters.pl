@@ -72,7 +72,7 @@ close FA;
 close S1;
 
 my $db= catfile($r_dir, "pool_new_proteins");
-my $cmd_format="$path_to_makeblastdb -dbtype prot -in $pool_new -title $db";
+my $cmd_format="$path_to_makeblastdb -dbtype prot -in $pool_new -out $db";
 print "$cmd_format\n";
 my $out=`$cmd_format`;
 print "makeblastdb : $out\n";
@@ -192,7 +192,7 @@ foreach(keys %unclustered){
 close S1;
 close S2;
 print "making a blastable db from the new unclustered\n";
-$out=`$path_to_makeblastdb -dbtype prot -in $pool_new_unclustered -title $blastable_new_unclustered`;
+$out=`$path_to_makeblastdb -dbtype prot -in $pool_new_unclustered -out $blastable_new_unclustered`;
 # on réduit aussi le fichier blast qu'on ajoute au blast des unclustered
 open(BL,"<$out_blast") || die "pblm ouverture fichier $out_blast\n";
 open(S1,">$blast_unclustered") || die "pblm ouverture fichier $blast_unclustered\n";
