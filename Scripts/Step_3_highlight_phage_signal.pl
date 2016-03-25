@@ -477,19 +477,19 @@ foreach(@liste_contigs){
 			elsif (defined($merged_match{$fragment_id}{"proof"}{"phage"}) || defined($merged_match{$fragment_id}{"proof"}{"noncaudo"})){# If we have some phage signal, 
 				if ($merged_match{$fragment_id}{"proof"}{"phage"}=~/:(\d*)/){
 					if ($1>=$th_sig){
-						$category=2; # Good, phage signal significant -> should be pretty sure
+						$category=2; # Good, phage signal significant -> should be quite sure
 					}
 				} 
 				elsif($merged_match{$fragment_id}{"proof"}{"phage"}>=$th_sig){
-					$category=2; # Good, phage signal significant -> should be pretty sure
+					$category=2; # Good, phage signal significant -> should be quite sure
 				}
 				if ($merged_match{$fragment_id}{"proof"}{"noncaudo"}=~/:(\d*)/){ ## THRESHOLD TO AVOID SHORT CONTIGS BIAS
 					if ($1>=$th_sig && $total_noncaudo>$th_nb_genes_noncaudo){
-						$category=2; # Good, phage signal significant -> should be pretty sure
+						$category=2; # Good, phage signal significant -> should be quite sure
 					}
 				} 
 				elsif($merged_match{$fragment_id}{"proof"}{"noncaudo"}>=$th_sig && $total_noncaudo>$th_nb_genes_noncaudo){ ## THRESHOLD TO AVOID SHORT CONTIGS BIAS
-					$category=2; # Good, phage signal significant -> should be pretty sure
+					$category=2; # Good, phage signal significant -> should be quite sure
 				}
 			}
 			if ($category==3){ # If the category is still 3, meaning that the phage signal (if there was any) was not that strong ..

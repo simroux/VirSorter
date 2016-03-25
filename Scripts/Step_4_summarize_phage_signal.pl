@@ -189,11 +189,11 @@ foreach(sort {$a <=> $b } keys %infos){
 open S1, '>', $global_summary;
 for (my $class=1;$class<=6;$class++){
 	if ($class==1){
-		print S1 "## 1 - Complete phage contigs - category 1 (pretty sure)\n";
+		print S1 "## 1 - Complete phage contigs - category 1 (sure)\n";
 		print S1 "## Contig_id,Nb genes contigs,Fragment,Nb genes,Category,Nb phage hallmark genes,Phage gene enrichment sig,Non-Caudovirales phage gene enrichment sig,Pfam depletion sig,Uncharacterized enrichment sig,Strand switch depletion sig,Short genes enrichment sig\n";
 	}
 	if ($class==2){
-		print S1 "## 2 - Complete phage contigs - category 2 (quite sure)\n";
+		print S1 "## 2 - Complete phage contigs - category 2 (somewhat sure)\n";
 		print S1 "## Contig_id,Nb genes contigs,Fragment,Nb genes,Category,Nb phage hallmark genes,Phage gene enrichment sig,Non-Caudovirales phage gene enrichment sig,Pfam depletion sig,Uncharacterized enrichment sig,Strand switch depletion sig,Short genes enrichment sig\n";
 	}
 	if ($class==3){
@@ -201,11 +201,11 @@ for (my $class=1;$class<=6;$class++){
 		print S1 "## Contig_id,Nb genes contigs,Fragment,Nb genes,Category,Nb phage hallmark genes,Phage gene enrichment sig,Non-Caudovirales phage gene enrichment sig,Pfam depletion sig,Uncharacterized enrichment sig,Strand switch depletion sig,Short genes enrichment sig\n";
 	}
 	if ($class==4){
-		print S1 "## 4 - Prophages - category 1 (pretty sure)\n";
+		print S1 "## 4 - Prophages - category 1 (sure)\n";
 		print S1 "## Contig_id,Nb genes contigs,Fragment,Nb genes,Category,Nb phage hallmark genes,Phage gene enrichment sig,Non-Caudovirales phage gene enrichment sig,Pfam depletion sig,Uncharacterized enrichment sig,Strand switch depletion sig,Short genes enrichment sig\n";
 	}
 	if ($class==5){
-		print S1 "## 5 - Prophages - category 2 (quite sure)\n";
+		print S1 "## 5 - Prophages - category 2 (somewhat sure)\n";
 		print S1 "## Contig_id,Nb genes contigs,Fragment,Nb genes,Category,Nb phage hallmark genes,Phage gene enrichment sig,Non-Caudovirales phage gene enrichment sig,Pfam depletion sig,Uncharacterized enrichment sig,Strand switch depletion sig,Short genes enrichment sig\n";	
 	}
 	if ($class==6){
