@@ -2,6 +2,12 @@
 
 Source code of the VirSorter App, available on iPlant (https://de.iplantcollaborative.org/de/)
 
+# Publication
+
+* VirSorter: mining viral signal from microbial genomic data
+* https://peerj.com/articles/985/
+* PubMed 26038737
+
 # Docker - from DockerHub
 
 * Download the databases required by VirSorter, available as a tarball archive on iMicrobe: http://mirrors.iplantcollaborative.org/browse/iplant/home/shared/imicrobe/VirSorter/virsorter-data.tar.gz
