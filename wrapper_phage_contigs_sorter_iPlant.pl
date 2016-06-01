@@ -81,7 +81,7 @@ say map { sprintf "%-15s: %s\n", @$_ } (
 );
 
 if ($tag_virome == 1) {
-    print "WARNING: THIS WILL BE A VIROME DECONTAMINATION RUN\n";
+    say "WARNING: THIS WILL BE A VIROME DECONTAMINATION RUN";
 }
 
 # Need 2 databases
@@ -124,8 +124,8 @@ if (-d $log_dir) {
 else {
     mkpath($log_dir);
 }
-my $log_out = catfile($log_dir, 'log_out');
-my $log_err = catfile($log_dir, 'log_err');
+my $log_out = catfile($log_dir, 'out');
+my $log_err = catfile($log_dir, 'err');
 
 # cp fasta file in the wdir
 my $fastadir = catdir($wdir, 'fasta');
@@ -141,10 +141,10 @@ if ( !-d $fastadir ) {
             my $id = $1;
             $id =~ s/[\/\.,\|\s?!\*%]/_/g;
             my $new_id = $code_dataset . "_" . $id;
-            print $s1 ">$new_id\n";
+            say $s1 ">$new_id";
         }
         else {
-            print $s1 "$_\n";
+            say $s1 $_;
         }
 
     }
@@ -159,12 +159,12 @@ if ( !-d $fastadir ) {
     my $cmd_step_1 
         = "$path_script_step_1 $code_dataset $fastadir $fna_file $nb_gene_th "
         . ">> $log_out 2>> $log_err";
-    print "Step 0.5 : $cmd_step_1\n";
+    say "Step 0.5 : $cmd_step_1";
     `echo $cmd_step_1 >> $log_out 2>> $log_err`;
     $out = `$cmd_step_1`;
 }
 
-print "\t$out\n";
+say "\t$out";
 
 my $fasta_contigs_nett 
     = catfile($fastadir, $code_dataset . "_nett_filtered.fasta");
@@ -179,13 +179,13 @@ my $cmd_hmm_pfama
     . "-o $out_hmmsearch_pfama_bis --noali $db_PFAM_a $fasta_file_prots "
     . ">> $log_out 2>> $log_err";
 
-print "Step 0.8 : $cmd_hmm_pfama\n";
+say "Step 0.8 : $cmd_hmm_pfama";
 
 `echo $cmd_hmm_pfama >> $log_out 2>> $log_err`;
 
 if (!(-e $out_hmmsearch_pfama)) {
     $out = `$cmd_hmm_pfama`;
-    print "\t$out\n";
+    say "\t$out";
 }
 
 my $out_hmmsearch_pfamb     = catfile($wdir, 'Contigs_prots_vs_PFAMb.tab');
@@ -194,12 +194,12 @@ my $cmd_hmm_pfamb
     = "$path_hmmsearch --tblout $out_hmmsearch_pfamb --cpu $n_cpus "
     . "-o $out_hmmsearch_pfamb_bis --noali $db_PFAM_b $fasta_file_prots "
     . ">> $log_out 2>> $log_err";
-print "Step 0.9 : $cmd_hmm_pfamb\n";
+say "Step 0.9 : $cmd_hmm_pfamb";
 `echo $cmd_hmm_pfamb >> $log_out 2>> $log_err`;
 
 if (!(-e $out_hmmsearch_pfamb)) {
     $out = `$cmd_hmm_pfamb`;
-    print "\t$out\n";
+    say "\t$out";
 }
 
 # Now work on the phage gene catalog
@@ -253,12 +253,12 @@ my $r_n = -1;
 while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
     $r_n++;    # New revision of the prediction
     my $dir_revision = catdir($wdir, 'r_' . $r_n);
-    print "### Revision $r_n\n";
+    say "### Revision $r_n";
 
     if (!-d $dir_revision) {
         ## mkdir for this revision
         mkpath($dir_revision);
-        print "Out : $out\n";
+        say "Out : $out";
 
         ## Clustering of the new prots with the unclustered
         my $script_new_cluster 
@@ -276,7 +276,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
                 );
                 $out = `$script_custom_phage $custom_phage $dir_Phage_genes/ $dir_revision/db >> $log_out 2>> $log_err`;
 
-                print "Adding custom phage to the database : $out\n";
+                say "Adding custom phage to the database : $out";
             }
             # should replace Pool_cluster / Pool_unclustered and
             # Pool_new_unclustered else , we just import the Refseq database
@@ -295,10 +295,10 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
                 "$new_prots_to_cluster >> $log_out 2>> $log_err"
             );
 
-            print "$cmd_new_clusters\n";
+            say $cmd_new_clusters;
             $out = `$cmd_new_clusters`;
 
-            print "Step 1.1 new clusters and new database : $out\n";
+            say "Step 1.1 new clusters and new database : $out";
             # Rm the list of prots to be clustered now that they should be
             # clustered
             $out = `rm $new_prots_to_cluster`;
@@ -323,8 +323,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         }
 
         if ($check == 0) {
-            print "There are no clusters in the database, " .
-                  "so we skip the hmmsearch\n";
+            say "There are no clusters in the database, so skip the hmmsearch";
         }
         else {
             my $out_hmmsearch_new =
@@ -339,15 +338,15 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
                 "$fasta_file_prots >> $log_out 2>> $log_err"
             );
 
-            print "Step 1.2 : $cmd_hmm_cluster\n";
+            say "Step 1.2 : $cmd_hmm_cluster";
 
             `echo $cmd_hmm_cluster >> $log_out 2>> $log_err`;
 
             $out = `$cmd_hmm_cluster`;
-            print "\t$out\n";
+            say "\t$out";
 
             $out = `cat $out_hmmsearch_new >> $out_hmmsearch`;
-            print "\t$out\n";
+            say "\t$out";
         }
 
         my $out_blast_new_unclustered =
@@ -366,15 +365,15 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
             "-evalue 0.001 >> $log_out 2>> $log_err"
         );
 
-        print "\nStep 1.3 : $cmd_blast_unclustered\n";
+        say "\nStep 1.3 : $cmd_blast_unclustered";
 
         `echo $cmd_blast_unclustered >> $log_out 2>> $log_err`;
         $out = `$cmd_blast_unclustered`;
 
-        print "\t$out\n";
+        say "\t$out";
         $out = `cat $out_blast_new_unclustered >> $out_blast_unclustered`;
 
-        print "\t$out\n";
+        say "\t$out";
 
         # Make backup of the previous files to have 
         # trace of the different steps
@@ -398,27 +397,27 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
     }
 
     ## Complete the affi
-    print "Step 2 : $cmd_merge\n";
+    say "Step 2 : $cmd_merge";
     `echo $cmd_merge >> $log_out 2>> $log_err`;
     $out = `$cmd_merge`; 
     ## This generate a csv table including the map of each contig, with PFAM
     #and Viral PCs annotations, as well as strand and length of genes
 
-    print "\t$out\n";
+    say "\t$out";
     ## Complete the summary
-    print "Step 3 : $cmd_detect\n";
+    say "Step 3 : $cmd_detect";
     `echo $cmd_detect >> $log_out 2>> $log_err`;
     $out = `$cmd_detect`;
-    print "\t$out\n";
+    say "\t$out";
 
     # Decide which contigs are entirely viral and which are prophages, and
     # which of both of these categories are phage enough to be added to the
     # databases
-    print "Setting up the final result file\n";
-    print "Step 4 : $cmd_summary\n";
+    say "Setting up the final result file";
+    say "Step 4 : $cmd_summary";
     `echo $cmd_summary >> $log_out 2>> $log_err`;
     $out = `$cmd_summary`;
-    print "\t$out\n";
+    say "\t$out";
 }
 
 # Last step -> extract all sequences as fasta files and gb
@@ -428,21 +427,21 @@ my $script_generate_output
 my $cmd_step_5 
     = "$script_generate_output $code_dataset $wdir >> $log_out 2>> $log_err";
 
-print "\nStep 5 : $cmd_step_5\n";
+say "\nStep 5 : $cmd_step_5";
 
 `echo $cmd_step_5 >> $log_out 2>> $log_err`;
 
 $out = `$cmd_step_5`;
-print "\t$out\n";
+say "\t$out";
 
 # Plus clean the output directory
-print "Cleaning the output directory\n";
+say "Cleaning the output directory";
 
 # We rm the first db to not overload user disk space
 my $db_revision_0 = catdir($wdir, 'r_0', 'db');
 if (-d $db_revision_0) {
     $out = `rm -r $db_revision_0`;
-    print "rm -r $db_revision_0 : $out\n";
+    say "rm -r $db_revision_0 : $out";
 }
 
 #`mv $fastadir $wdir/Fasta_files`;
@@ -488,33 +487,33 @@ my $datestring        = localtime();
 my $local_readme_file = catfile($wdir, 'Readme.txt');
 
 open my $s1, '>', $local_readme_file;
-print $s1 "VirSorter parameters used :\n\n";
-print $s1 "--> Fasta file mined for viral sequences : $input_file\n";
-print $s1 "--> Viral database used : ";
+say $s1 "VirSorter parameters used :\n";
+say $s1 "--> Fasta file mined for viral sequences : $input_file";
+say $s1 "--> Viral database used : ";
 
 if ($choice_database == 2) {
-    print $s1 join(' ', 
+    say $s1 join(' ', 
         "Viromes : all bacterial and archaeal virus genomes in Refseq,",
         "as of January 2014, plus non-redundant predicted genes from viral",
         "metagenomes (including seawater, freshwater, and human-related",
-        "samples)\n"
+        "samples)"
     );
 }
 else {
-    print $s1 "RefseqABVir (all bacterial and archaeal virus genomes " .
-        "in Refseq, as of January 2014)\n";
+    say $s1 "RefseqABVir (all bacterial and archaeal virus genomes " .
+        "in Refseq, as of January 2014)";
 }
 
 if ($custom_phage eq "") {
-    print $s1 "--> No custom reference sequence was added to the database\n";
+    say $s1 "--> No custom reference sequence was added to the database";
 }
 else {
-    print $s1 "--> Custom reference sequences from fasta file $custom_phage " .
-        "were added to the database\n";
+    say $s1 "--> Custom reference sequences from fasta file $custom_phage " .
+        "were added to the database";
 }
 
 if ($tag_virome == 1) {
-    print $s1 join(' ',
+    say $s1 join(' ',
         "VirSorter was run with the in the 'Virome Decontamination' mode:",
         "overall metrics for microbial sequences were not evaluated from the",
         "complete dataset, but instead pre-computed values based on bacterial",
@@ -522,7 +521,7 @@ if ($tag_virome == 1) {
     );
 }
 
-print $s1 "\nThis VirSorter computation finished on $datestring\n";
+say $s1 "This VirSorter computation finished on $datestring";
 close $s1;
 
 `cat $readme_file >> $local_readme_file`;
