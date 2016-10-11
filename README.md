@@ -1,6 +1,6 @@
 # VirSorter
 
-Source code of the VirSorter App, available on iPlant (https://de.iplantcollaborative.org/de/)
+Source code of the VirSorter App, available on CyVerse (https://de.iplantcollaborative.org/de/)
 
 # Publication
 
