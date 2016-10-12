@@ -209,7 +209,7 @@ close PROT;
 close NEWPROT;
 # - 3 - and make new clusters
 my $db=$tmp_dir."Custom_phages_mga_prots-to-cluster";
-my $cmd_format="$path_to_makeblastdb -in $prot_file_to_cluster -out $db";
+my $cmd_format="$path_to_makeblastdb -in $prot_file_to_cluster -out $db -dbtype prot";
 print "$cmd_format\n";
 my $out=`$cmd_format`;
 print "Formatdb : $out\n";
@@ -321,7 +321,7 @@ foreach(keys %unclustered){
 }
 close S1;
 print "making a blastable db from the new unclustered\n";
-$out=`$path_to_makeblastdb -in $final_pool_unclustered -out $final_blastable_unclustered`;
+$out=`$path_to_makeblastdb -in $final_pool_unclustered -out $final_blastable_unclustered -dbtype prot`;
 # We subset the BLAST result to only unclustered proteins, and add it to the previous unclustered blast result
 open(BL,"<$out_blast") || die "pblm ouverture fichier $out_blast\n";
 open(S1,">$final_blast_unclustered") || die "pblm ouverture fichier $final_blast_unclustered\n";
