@@ -209,7 +209,7 @@ close PROT;
 close NEWPROT;
 # - 3 - and make new clusters
 my $db=$tmp_dir."Custom_phages_mga_prots-to-cluster";
-my $cmd_format="$path_to_makeblastdb -in $prot_file_to_cluster -out $db";
+my $cmd_format="$path_to_makeblastdb -in $prot_file_to_cluster -out $db -dbtype prot";
 print "$cmd_format\n";
 my $out=`$cmd_format`;
 print "Formatdb : $out\n";
@@ -219,7 +219,7 @@ $out=`$cmd_cat`;
 print "Cat : $cmd_cat\n";
 #     - blast vs themselves and the unclustered
 my $out_blast=$tmp_dir."pool_unclustered-and-custom-phages-vs-custom-phages.tab";
-my $cmd_blast="$path_to_blastp -queury $prot_file_to_cluster -db $db -out $out_blast -outfmt 6 -num_threads 10 -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
+my $cmd_blast="$path_to_blastp -query $prot_file_to_cluster -db $db -out $out_blast -outfmt 6 -num_threads 10 -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
 print "$cmd_blast\n";
 $out=`$cmd_blast`;
 print "Blast : $out\n";
@@ -263,7 +263,7 @@ my %unclustered;
 my %clusters;
 my %check_cluster;
 my $last_cluster_id=0;
-# toutes les séquences clusterisées dans des groupes de plus de 2 (3 et plus) -> on prend / Toutes les autres on les garde en tant qu'unclustered
+# All predicted proteins clustered in PCs of 3 and more members are added to the db, the others are added to the pool of unclustered
 open(DUMP,"<$dump_file") || die "pblm ouverture fichier $dump_file\n";
 while(<DUMP>){
 	chomp($_);
@@ -321,8 +321,8 @@ foreach(keys %unclustered){
 }
 close S1;
 print "making a blastable db from the new unclustered\n";
-$out=`$path_to_makeblastdb -in $final_pool_unclustered -out $final_blastable_unclustered`;
-# on réduit aussi le fichier blast qu'on ajoute au blast des unclustered
+$out=`$path_to_makeblastdb -in $final_pool_unclustered -out $final_blastable_unclustered -dbtype prot`;
+# We subset the BLAST result to only unclustered proteins, and add it to the previous unclustered blast result
 open(BL,"<$out_blast") || die "pblm ouverture fichier $out_blast\n";
 open(S1,">$final_blast_unclustered") || die "pblm ouverture fichier $final_blast_unclustered\n";
 while(<BL>){
@@ -367,15 +367,15 @@ foreach(sort keys %clusters){
 	print S1 "\n//\n";
 	`$path_to_hmmbuild --amino $path_to_hmm $out_stokcholm`;
 }
-# on poole tous les hmm et les fasta, y compris les precedentes !
+# We pool all hmm / fasta from all PCs
 $out=`cat $db_phage > $db_out/Pool_clusters.hmm`;
 print "cat previous hmm : $out\n";
 $out=`cat $tmp_dir/clusts/*.hmm >> $db_out/Pool_clusters.hmm`;
 print "cat new hmm : $out\n";
-# on en fait une base de données screenable par hmmscan
+# We create a db for hmmscan
 $out=`$path_to_hmmpress $db_out/Pool_clusters.hmm`;
 print "hmm press :$out\n";
-# update the phage cluster catalog
+# And update the phage clusters catalog
 my $final_catalog=$db_out."/Phage_Clusters_current.tab";
 $out=`cat $ref_phage_clusters > $final_catalog`;
 print "Cat old catalog : $out\n";

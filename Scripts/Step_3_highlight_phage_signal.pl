@@ -77,7 +77,7 @@ while(<F1>){
 		else{
 			if ($tab[9] eq "-" || $tab[6]>$tab[10]){ ## no PFAM or Phage Cluster better than PFAM (score comparison)
 				$infos{$id_c}{$gene}{"best_domain_hit"}="PC-".$tab[5];
-				if ($tab[9] ne ""){$infos{$id_c}{$gene}{"hit_PFAM"}="PFAM-".$tab[5];}
+				if ($tab[9] ne "-"){$infos{$id_c}{$gene}{"hit_PFAM"}="PFAM-".$tab[5];}
 				if ($tab[8] eq "-"){$infos{$id_c}{$gene}{"category"}=-1;}
 				else{$infos{$id_c}{$gene}{"category"}=$tab[8];}
 			}

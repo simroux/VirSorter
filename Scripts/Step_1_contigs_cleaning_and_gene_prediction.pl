@@ -1,5 +1,4 @@
 #!/usr/bin/env perl
-#!/usr/bin/env perl
 
 use strict;
 use autodie;
@@ -80,7 +79,7 @@ close $s2;
 
 # Gene prediction for all contigs
 my $out_file= $tmp_dir."/".$id."_mga.predict";
-print "$path_to_mga $in_file -m > $out_file\n";
+print "mga ($path_to_mga) $in_file -m > $out_file\n";
 my $mga=`$path_to_mga $in_file -m > $out_file`;
 
 # Special prediction for circular contigs if we have some
