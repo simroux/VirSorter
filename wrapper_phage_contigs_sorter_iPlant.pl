@@ -40,7 +40,7 @@ use Cwd 'cwd';
 my $help            = '';
 my $code_dataset    = 'VIRSorter';
 my $input_file      = '';
-my $choice_database = '';
+my $choice_database = 1;
 my $tag_virome      = 0;
 my $custom_phage    = '';
 my $data_dir        = '/data';
@@ -67,8 +67,8 @@ unless ($input_file) {
     pod2usage('Missing FASTA file');
 }
 
-unless ($choice_database == 1 || $choice_database == 2) {
-    pod2usage('choice_database must be 1 or 2');
+if ($choice_database < 1 || $choice_database > 3) {
+    pod2usage('choice_database must be 1, 2, or 3');
 }
 
 say map { sprintf "%-15s: %s\n", @$_ } (
@@ -106,6 +106,12 @@ if ($choice_database == 2) {
     $dir_Phage_genes    = catdir($data_dir, 'Phage_gene_catalog_plus_viromes');
     $ref_phage_clusters = catfile($data_dir,
         'Phage_gene_catalog_plus_viromes', 'Phage_Clusters_current.tab');
+}
+elsif ($choice_database == 3) {
+    $dir_Phage_genes    = catdir($data_dir, 'euk-virus');
+    # ??? what goes here?  I don't have this file
+    $ref_phage_clusters = catfile($data_dir,
+        'euk-virus', 'Phage_Clusters_current.tab');
 }
 
 my $db_PFAM_a = catfile($data_dir, 'PFAM_27', 'Pfam-A.hmm');
@@ -499,6 +505,9 @@ if ($choice_database == 2) {
         "metagenomes (including seawater, freshwater, and human-related",
         "samples)\n"
     );
+}
+elsif ($choice_database == 3) {
+    print $s1 "Eukaryotic";
 }
 else {
     print $s1 "RefseqABVir (all bacterial and archaeal virus genomes " .
