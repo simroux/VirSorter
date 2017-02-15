@@ -78,7 +78,7 @@ while(<RESU>){
 	chomp($_);
 	if($_=~/^# gc/){}
 	elsif($_=~/^# self: (.*)/){$type{$id_c}=$1;}
-	elsif ($_=~/^# (.*)/){
+	elsif ($_=~/^# (\S*)/){
 		$id_c=$1;
 		$n2=0;
 	}
