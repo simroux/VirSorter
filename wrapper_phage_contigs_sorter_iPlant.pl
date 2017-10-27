@@ -15,7 +15,7 @@ Options:
   --db           Either "1" (DEFAULT Refseqdb) or "2" (Viromedb)
   --wdir         Working directory (DEFAULT cwd)
   --ncpu         Number of CPUs
-  --virome       Virome decontamination mode, for datasets mostly viral, force the use of generic metrics instead of calculated from the whole dataset
+  --virome       Virome decontamination mode, for datasets mostly viral, force the use of generic metrics instead of calculated from the whole dataset. Set to 1 to use virome decontamination mode (default: 0)
 
   --help         Show help and exit
 
