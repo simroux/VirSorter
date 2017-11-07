@@ -42,7 +42,7 @@ Install the following into a "bin" directory:
 * MCL (http://micans.org/mcl/)
 * Metagene Annotator (http://metagene.nig.ac.jp/metagene/download_mga.html)
 * MUSCLE (http://www.drive5.com/muscle/)
-* BLAST (ftp://ftp.ncbi.nlm.nih.gov/blast/executables/release/LATEST/, not BLAST+)
+* BLAST+ (ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/)
 
 
 ## Data Container
