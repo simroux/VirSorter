@@ -64,8 +64,6 @@ This is the Dockerfile for that:
 
     COPY Phage_gene_catalog_plus_viromes /data/Phage_gene_catalog_plus_viromes
 
-    COPY SUP05_SAGs_with_viruses.fna /data/
-
     COPY VirSorter_Readme.txt /data
 
     COPY VirSorter_Readme_viromes.txt /data
