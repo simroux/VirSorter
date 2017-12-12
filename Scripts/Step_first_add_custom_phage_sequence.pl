@@ -27,7 +27,7 @@ my $path_to_hmmbuild    = which("hmmbuild")       or die "No hmmbuild\n";
 my $path_to_hmmpress    = which("hmmpress")       or die "No hmmpress\n";
 my $path_hmmsearch      = which("hmmsearch")      or die "No hmmsearch\n";
 my $path_to_mga         = which("mga_linux_ia64") or die "No mga\n";
-my $MCX_LOAD            = which("mcxload")        or die "No mcxloafd\n";
+my $MCX_LOAD            = which("mcxload")        or die "No mcxload\n";
 my $MCL                 = which("mcl")            or die "No mcl\n";
 
 my $min_seq_in_a_cluster=3;
