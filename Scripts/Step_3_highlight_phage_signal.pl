@@ -405,7 +405,7 @@ foreach(@liste_contigs){
 					$tag_complete=1;
 					my $new_fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
 					print "We have a complete prophage -- we add it $new_fragment_id !\n";
-					<STDIN>;
+					# <STDIN>;
 					foreach(keys %{$merged_match{$fragment_id}}){
 						$merged_match{$new_fragment_id}{$_}=$merged_match{$fragment_id}{$_};
 					}
