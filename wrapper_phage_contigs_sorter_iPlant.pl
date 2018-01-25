@@ -45,7 +45,7 @@ my $tag_virome      = 0;
 my $custom_phage    = '';
 my $data_dir        = '/data';
 my $n_cpus          = 16;
-my $wdir            = cwd();
+my $wdir            = catdir(cwd(), 'virsorter-out');
 
 GetOptions(
    'f|fna=s'     => \$input_file,
