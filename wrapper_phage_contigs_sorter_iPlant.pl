@@ -453,16 +453,16 @@ if (-d $db_revision_0) {
 #`mv $fastadir $wdir/Fasta_files`;
 
 # We put all results from Hmmsearch and BLAST files in a separate directory
-my $store_database_comparison = catdir($wdir, "Tab_files");
-mkpath($store_database_comparison);
-`mv $out_hmmsearch $store_database_comparison`;
+my $store_database_comparison = catdir($wdir, "tab_files");
+mkpath($store_database_comparison) unless -d $store_database_comparison;
+safe_mv($out_hmmsearch, $store_database_comparison);
 
 # `mv $out_hmmsearch_bis $store_database_comparison/`;
-`mv $out_blast_unclustered $store_database_comparison`;
-`mv $out_hmmsearch_pfama $store_database_comparison`;
-`mv $out_hmmsearch_pfama_bis $store_database_comparison`;
-`mv $out_hmmsearch_pfamb $store_database_comparison`;
-`mv $out_hmmsearch_pfamb_bis $store_database_comparison`;
+safe_mv($out_blast_unclustered, $store_database_comparison);
+safe_mv($out_hmmsearch_pfama, $store_database_comparison);
+safe_mv($out_hmmsearch_pfama_bis, $store_database_comparison);
+safe_mv($out_hmmsearch_pfamb, $store_database_comparison);
+safe_mv($out_hmmsearch_pfamb_bis, $store_database_comparison);
 
 #`mv error.log $log_dir`;
 #`mv formatdb.log $log_dir`;
@@ -479,14 +479,12 @@ if (!-d $store_metric_files) {
     mkpath($store_metric_files);
 }
 
-`mv $out_file_affi $store_metric_files/VIRSorter_affi-contigs.tab`;
+safe_mv($out_file_affi, "$store_metric_files/VIRSorter_affi-contigs.tab");
 my $out_file_affi_ref = $code_dataset . "_affi-contigs.refs";
-`mv $out_file_affi_ref $store_metric_files`;
-`mv $out_file_phage_fragments $store_metric_files/VIRSorter_phage_signal.tab`;
+safe_mv($out_file_affi_ref, $store_metric_files);
+safe_mv($out_file_phage_fragments, "$store_metric_files/VIRSorter_phage_signal.tab");
 
-if (-e $new_prots_to_cluster) {
-    `mv $new_prots_to_cluster $store_metric_files/`;
-}
+safe_mv($new_prots_to_cluster, $store_metric_files);
 
 # And we customize and add the readme file in the output directory
 my $datestring        = localtime();
@@ -534,3 +532,11 @@ say $s1 "This VirSorter computation finished on $datestring";
 close $s1;
 
 `cat $readme_file >> $local_readme_file`;
+
+sub safe_mv {
+    my ($src, $dest) = @_;
+    return unless $src && $dest;
+    return unless -e $src;
+    return unless -e $src;
+    `mv $src $dest`;
+}
