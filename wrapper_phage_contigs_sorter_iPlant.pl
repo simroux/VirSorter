@@ -78,6 +78,7 @@ say map { sprintf "%-15s: %s\n", @$_ } (
     ['Db',            $choice_database],
     ['Working dir',   $wdir],
     ['Custom phages', $custom_phage],
+    ['Data dir',      $data_dir],
 );
 
 if ($tag_virome == 1) {
