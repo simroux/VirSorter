@@ -5,6 +5,7 @@ use autodie;
 use File::Spec::Functions;
 use File::Path 'mkpath';
 use File::Which 'which';
+use Parallel::ForkManager;
 
 # Script to generate a new db with putative new clusters
 # Argument 0 : revision directory
@@ -208,9 +209,12 @@ while(<BL>){
 close BL;
 close S1;
 
-my $tag=0;
+#my $tag=0;
+
+my $pm = new Parallel::ForkManager($n_cpus); #Starts the parent process for parallelizing the next foreach loop, sets max number of parallel processes
 foreach(sort keys %clusters){
-	$tag=1;
+	$pm->start and next; #do the fork
+#	$tag=1;
 	my $ali_id=$_;
 	my $path_to_file= catfile($r_dir, "clusts", $ali_id);
 	my $path_to_fasta=catfile($r_dir, "clusts", $ali_id . ".faa");
@@ -219,27 +223,31 @@ foreach(sort keys %clusters){
 	if (-e $path_to_ali){
 		`rm $path_to_ali $path_to_hmm`;
 	}
-	my $muscle_out= catfile($r_dir, "log_out_muscle");
-	my $muscle_err= catfile($r_dir, "log_err_muscle");
+	my $muscle_out= catfile($r_dir, "log_out_muscle_$$");
+	my $muscle_err= catfile($r_dir, "log_err_muscle_$$");
 	`$path_to_muscle -in $path_to_fasta -out $path_to_ali > $muscle_out 2> $muscle_err`;
-	my $out_stokcholm=$path_to_ali.".stockholm";
-	open(S1,">$out_stokcholm") || die "pblm opening $out_stokcholm\n";
-	print S1 "# STOCKHOLM 1.0\n";
-	open(FA,"<$path_to_ali") || die "pblm ouverture $path_to_ali\n";
-	while(<FA>){
-		chomp($_);
-		if ($_=~/^>(.*)/){
-			my $id=$1;
-			$id=~s/\s/_/g;
-			print S1 "\n$id  ";
-			
-		}
-		else{print S1 "$_";}
-	}
-	close FA;
-	print S1 "\n//\n";
-	`$path_to_hmmbuild --amino $path_to_hmm $out_stokcholm`;
+#	my $out_stokcholm=$path_to_ali.".stockholm";
+#	open(S1,">$out_stokcholm") || die "pblm opening $out_stokcholm\n";
+#	print S1 "# STOCKHOLM 1.0\n";
+#	open(FA,"<$path_to_ali") || die "pblm ouverture $path_to_ali\n";
+#	while(<FA>){
+#		chomp($_);
+#		if ($_=~/^>(.*)/){
+#			my $id=$1;
+#			$id=~s/\s/_/g;
+#			print S1 "\n$id  ";
+#			
+#		}
+#		else{print S1 "$_";}
+#	}
+#	close FA;
+#	print S1 "\n//\n";
+#HMMER can take aligned fasta as input, no need to convert. Commmenting out previous 16 lines.
+	`$path_to_hmmbuild --amino --cpu 1 --informat afa $path_to_hmm $path_to_ali`;
+	`rm $muscle_out $muscle_err`;
+	$pm->finish; # do the exit in the child process
 }
+$pm->wait_all_children; # wait until everything in the above foreach loop is done before moving on
 
 my @tab_hmm=<$r_dir/clusts/*.hmm>;
 if ($#tab_hmm>=0){

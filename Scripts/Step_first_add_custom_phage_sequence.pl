@@ -338,8 +338,11 @@ close BL;
 close S1;
 # Generating the new database
 my $tag=0;
+
+my $pm = new Parallel::ForkManager($n_cpu); #Starts the parent process for parallelizing the next foreach loop, sets max number of parallel processes
 foreach(sort keys %clusters){
-	$tag=1;
+	$pm->start and next; #do the fork
+#	$tag=1;
 	my $ali_id=$_;
 	my $path_to_file=$tmp_dir."clusts/".$ali_id;
 	my $path_to_fasta=$tmp_dir."clusts/".$ali_id.".faa";
@@ -348,27 +351,30 @@ foreach(sort keys %clusters){
 	if (-e $path_to_ali){
 		`rm $path_to_ali $path_to_hmm`;
 	}
-	my $muscle_out=$tmp_dir."log_out_muscle";
-	my $muscle_err=$tmp_dir."log_err_muscle";
+	my $muscle_out=$tmp_dir."log_out_muscle_$$";
+	my $muscle_err=$tmp_dir."log_err_muscle_$$";
 	`$path_to_muscle -in $path_to_fasta -out $path_to_ali > $muscle_out 2> $muscle_err`;
-	my $out_stokcholm=$path_to_ali.".stockholm";
-	open(S1,">$out_stokcholm") || die "pblm opening $out_stokcholm\n";
-	print S1 "# STOCKHOLM 1.0\n";
-	open(FA,"<$path_to_ali") || die "pblm ouverture $path_to_ali\n";
-	while(<FA>){
-		chomp($_);
-		if ($_=~/^>(.*)/){
-			my $id=$1;
-			$id=~s/\s/_/g;
-			print S1 "\n$id  ";
-			
-		}
-		else{print S1 "$_";}
-	}
-	close FA;
-	print S1 "\n//\n";
-	`$path_to_hmmbuild --amino $path_to_hmm $out_stokcholm`;
+#	my $out_stokcholm=$path_to_ali.".stockholm";
+#	open(S1,">$out_stokcholm") || die "pblm opening $out_stokcholm\n";
+#	print S1 "# STOCKHOLM 1.0\n";
+#	open(FA,"<$path_to_ali") || die "pblm ouverture $path_to_ali\n";
+#	while(<FA>){
+#		chomp($_);
+#		if ($_=~/^>(.*)/){
+#			my $id=$1;
+#			$id=~s/\s/_/g;
+#			print S1 "\n$id  ";
+#			
+#		}
+#		else{print S1 "$_";}
+#	}
+#	close FA;
+#	print S1 "\n//\n";
+	`$path_to_hmmbuild --amino --cpu 1 --informat afa $path_to_hmm $path_to_ali`;
+	`rm $muscle_out $muscle_err`;
+	$pm->finish; # do the exit in the child process
 }
+$pm->wait_all_children; # wait until everything in the above foreach loop is done before moving on
 # We pool all hmm / fasta from all PCs
 $out=`cat $db_phage > $db_out/Pool_clusters.hmm`;
 print "cat previous hmm : $out\n";
@@ -384,6 +390,7 @@ print "Cat old catalog : $out\n";
 open(CA,">>$final_catalog") || die ("pblm opening file $final_catalog\n");
 foreach(keys %clusters){
 	my $liste=join(" ",keys %{$clusters{$_}});
+	$liste =~ s/\|/_/g; #Added to keep same format of clusters file when adding new ones
 	print CA "$_|2||$liste\n";
 }
 close CA;
