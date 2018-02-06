@@ -246,7 +246,7 @@ my $cmd_detect
 
 if ($tag_virome == 1) {
     $cmd_detect 
-        = "$script_detect $out_file_affi $out_file_phage_fragments $n_cpus "
+        = "$script_detect $out_file_affi $out_file_phage_fragments "
         . "$generic_ref_file >> $log_out 2>> $log_err";
 }
 
@@ -493,7 +493,7 @@ if (!-d $store_metric_files) {
 }
 
 safe_mv($out_file_affi, "$store_metric_files/VIRSorter_affi-contigs.tab");
-my $out_file_affi_ref = $code_dataset . "_affi-contigs.refs";
+my $out_file_affi_ref = catdir($wdir, $code_dataset . "_affi-contigs.refs");
 safe_mv($out_file_affi_ref, $store_metric_files);
 safe_mv($out_file_phage_fragments, "$store_metric_files/VIRSorter_phage_signal.tab");
 
