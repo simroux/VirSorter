@@ -10,12 +10,13 @@ use File::Which 'which';
 # Script to generate a new db with putative new clusters
 # Argument 0 : Fasta file of the new phages
 
-if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[2])))
+if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[3])))
 {
 	print "# Script to generate a new db with putative new clusters
 # Argument 0 : fasta of custom phages
 # Argument 1 : db-in directory
 # Argument 2 : db-out directory
+# Argument 3 : number of CPUs to use
 \n";
 	die "\n";
 }
@@ -36,6 +37,7 @@ my $n_cpus=8;
 my $fasta_contigs=$ARGV[0];
 my $db_in=$ARGV[1];
 my $db_out=$ARGV[2];
+my $n_cpus=$ARGV[3];
 
 my $tmp_dir=$db_out."/initial_db";
 `mkdir $tmp_dir`;
@@ -219,7 +221,7 @@ $out=`$cmd_cat`;
 print "Cat : $cmd_cat\n";
 #     - blast vs themselves and the unclustered
 my $out_blast=$tmp_dir."pool_unclustered-and-custom-phages-vs-custom-phages.tab";
-my $cmd_blast="$path_to_blastp -query $prot_file_to_cluster -db $db -out $out_blast -outfmt 6 -num_threads 10 -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
+my $cmd_blast="$path_to_blastp -query $prot_file_to_cluster -db $db -out $out_blast -outfmt 6 -num_threads $n_cpus -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
 print "$cmd_blast\n";
 $out=`$cmd_blast`;
 print "Blast : $out\n";
@@ -254,7 +256,7 @@ print "$cmd_mcxload\n";
 $out=`$cmd_mcxload`;
 print "Mxc Load : $out\n";
 my $dump_file=$tmp_dir."new_clusters.csv";
-my $cmd_mcl="$MCL $out_mci -I 2  -use-tab $out_tab -o $dump_file";
+my $cmd_mcl="$MCL $out_mci -I 2 -te $n_cpus -use-tab $out_tab -o $dump_file";
 print "$cmd_mcl\n";
 $out=`$cmd_mcl`;
 print "Mcl : $out\n";

@@ -11,13 +11,14 @@ use File::Which 'which';
 # Argument 1 : Fasta file of the predicted proteins
 # Argument 2 : Fasta file of the unclustered from previous Runs
 # Argument 3 : Liste of prots to try to cluster
-if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[3])))
+if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[4])))
 {
 	print "# Script to generate a new db with putative new clusters
 # Argument 0 : revision directory
 # Argument 1 : Fasta file of the predicted proteins
 # Argument 2 : Fasta file of the unclustered from previous Runs
-# Argument 3 : Liste of prots to try to cluster\n";
+# Argument 3 : Liste of prots to try to cluster
+# Argument 4 : Number of CPUs to use\n";
 	die "\n";
 }
 
@@ -29,6 +30,7 @@ my $path_to_hmmbuild    = which("hmmbuild")    or die "No hmmbuild\n";
 my $path_to_hmmpress    = which("hmmpress")    or die "No hmmpress\n";
 my $path_to_makeblastdb = which("makeblastdb") or die "No makeblastdb\n";
 
+my $n_cpus=$ARGV[4];
 my $r_dir=$ARGV[0];
 $r_dir=~/(r_\d*)\/?$/;
 my $r_number=$1;
@@ -82,7 +84,7 @@ $out=`$cmd_cat`;
 print "Cat : $cmd_cat\n";
 # BLAST des unclustered et des new contre les new
 my $out_blast=catfile($r_dir, "pool_unclustered-and-new-proteins-vs-new-proteins.tab");
-my $cmd_blast="$path_to_blastp -query $pool_new -db $db -out $out_blast -outfmt 6 -num_threads 10 -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
+my $cmd_blast="$path_to_blastp -query $pool_new -db $db -out $out_blast -outfmt 6 --num_threads $n_cpus -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
 print "$cmd_blast\n";
 $out=`$cmd_blast`;
 print "Blast : $out\n";
@@ -116,7 +118,7 @@ print "$cmd_mcxload\n";
 $out=`$cmd_mcxload`;
 print "Mxc Load : $out\n";
 my $dump_file=catfile($r_dir, "new_clusters.csv");
-my $cmd_mcl="$MCL $out_mci -I 2  -use-tab $out_tab -o $dump_file";
+my $cmd_mcl="$MCL $out_mci -I 2 -te $n_cpus -use-tab $out_tab -o $dump_file";
 print "$cmd_mcl\n";
 $out=`$cmd_mcl`;
 print "Mcl : $out\n";

@@ -8,11 +8,13 @@ use FindBin '$Bin';
 # Script to measure metrics on the sliding window
 # Argument 0 : csv file of the contigs
 # Argument 1 : summary file of the phage fragments
-if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[1])))
+# Argument 2 : number of CPUs to use in parallel processing of sliding window analysis
+if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[2])))
 {
 	print "# Script to measure metrics on the sliding window
 # Argument 0 : csv file of the contigs
 # Argument 1 : summary file of the phage fragments
+
 # Argument 2 (optional) : a file with the refs values that we could use instead of estimating them \n";
 	die "\n";
 }
@@ -182,7 +184,7 @@ foreach(@liste_contigs){
 	foreach(@tab_genes){
 		my $gene=$_;
 		my $tag="";
-		# Line : PC / PFAM / UNCH / SIZE / STRAND / HALLMARK
+		# Line : PC / noncaudo / PFAM / UNCH / SIZE / STRAND / HALLMARK
 		if($infos{$contig_c}{$gene}{"best_domain_hit"}=~/^PC/){
 			if ($infos{$contig_c}{$gene}{"category"}>=3){$tag="1\t1\t0\t0\t";$total_noncaudo++;}
 			else{$tag="1\t0\t0\t0\t";}
