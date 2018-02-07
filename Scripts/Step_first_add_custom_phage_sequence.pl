@@ -7,6 +7,7 @@ use Bio::Seq;
 use File::Spec::Functions;
 use File::Path 'mkpath';
 use File::Which 'which';
+use Parallel::ForkManager;
 # Script to generate a new db with putative new clusters
 # Argument 0 : Fasta file of the new phages
 
@@ -339,7 +340,7 @@ close S1;
 # Generating the new database
 my $tag=0;
 
-my $pm = new Parallel::ForkManager($n_cpu); #Starts the parent process for parallelizing the next foreach loop, sets max number of parallel processes
+my $pm = new Parallel::ForkManager($n_cpus); #Starts the parent process for parallelizing the next foreach loop, sets max number of parallel processes
 foreach(sort keys %clusters){
 	$pm->start and next; #do the fork
 #	$tag=1;
