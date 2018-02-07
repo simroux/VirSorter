@@ -245,7 +245,7 @@ foreach(sort keys %clusters){
 #HMMER can take aligned fasta as input, no need to convert. Commmenting out previous 16 lines.
 	`$path_to_hmmbuild --amino --cpu 1 --informat afa $path_to_hmm $path_to_ali`;
 	`rm $muscle_out $muscle_err`;
-	$pm->finish; # do the exit in the child process
+	$pm->finish(0); # do the exit in the child process
 }
 $pm->wait_all_children; # wait until everything in the above foreach loop is done before moving on
 

@@ -244,12 +244,12 @@ my $cmd_merge
 
 my $script_detect = catfile($script_dir, "Step_3_highlight_phage_signal.pl");
 my $cmd_detect 
-    = "$script_detect $out_file_affi $out_file_phage_fragments "
+    = "$script_detect $out_file_affi $out_file_phage_fragments $n_cpus "
     . ">> $log_out 2>> $log_err";
 
 if ($tag_virome == 1) {
     $cmd_detect 
-        = "$script_detect $out_file_affi $out_file_phage_fragments "
+        = "$script_detect $out_file_affi $out_file_phage_fragments $n_cpus "
         . "$generic_ref_file >> $log_out 2>> $log_err";
 }
 
