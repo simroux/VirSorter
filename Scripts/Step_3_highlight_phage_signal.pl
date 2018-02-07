@@ -4,6 +4,8 @@ use strict;
 use autodie;
 use File::Spec::Functions;
 use FindBin '$Bin';
+use Parallel::ForkManager;
+use List::MoreUtils qw(natatime);
 
 # Script to measure metrics on the sliding window
 # Argument 0 : csv file of the contigs
@@ -14,20 +16,21 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 	print "# Script to measure metrics on the sliding window
 # Argument 0 : csv file of the contigs
 # Argument 1 : summary file of the phage fragments
-
-# Argument 2 (optional) : a file with the refs values that we could use instead of estimating them \n";
+# Argument 2 : number of CPUs to use in parallel processing of sliding window analysis
+# Argument 3 (optional) : a file with the refs values that we could use instead of estimating them \n";
 	die "\n";
 }
 $| = 1;
 my $csv_file = $ARGV[0];
 my $out_file = $ARGV[1];
+my $n_cpus = $ARGV[2];
 if ( -e $out_file ) { `rm $out_file`; }
 my $ref_file = $ARGV[0];
 $ref_file =~ s/\.csv/.refs/g;
 my $do_ref_estimation = 0;
 if (defined($ARGV[2])){
-#	$ref_file=$ARGV[2];
-	`cp $ARGV[2] $ref_file`; # That way, the ref file is in the result directory if a use wants to check it
+#	$ref_file=$ARGV[3];
+	`cp $ARGV[3] $ref_file`; # That way, the ref file is in the result directory if a use wants to check it
 	$do_ref_estimation=1;
 }
 
@@ -164,368 +167,382 @@ print "## Then look at each contig and each sliding window\n";
 open S1, '>', $out_file;
 close S1;
 my $i=0;
-foreach(@liste_contigs){
-	my $contig_c=$_;
-	my @tab_genes=sort {$infos{$contig_c}{$a}{"order"} <=> $infos{$contig_c}{$b}{"order"}} keys %{$infos{$contig_c}};
-	my $total_nb_genes=$#tab_genes+1;
-	### Preparing data for C program
-	my $out_file_c=$ref_file;
-	$out_file_c=~s/\.refs/.tmp_$i/g;
-	my $out_file_c2=$ref_file;
-	$out_file_c2=~s/\.refs/.out_$i/g;
-	my $out_file_c3=$ref_file;
-	$out_file_c3=~s/\.refs/.out_$i-sorted/g;
-# 	print "we have $out_file_c $out_file_c2 $out_file_c3\n";
-	open MAP_C, '>', $out_file_c;
-	print MAP_C "$nb_genes{$contig_c}\n";
-	my $last_strand="0";
-	my $total_hallmark=0;
-	my $total_noncaudo=0;
-	foreach(@tab_genes){
-		my $gene=$_;
-		my $tag="";
-		# Line : PC / noncaudo / PFAM / UNCH / SIZE / STRAND / HALLMARK
-		if($infos{$contig_c}{$gene}{"best_domain_hit"}=~/^PC/){
-			if ($infos{$contig_c}{$gene}{"category"}>=3){$tag="1\t1\t0\t0\t";$total_noncaudo++;}
-			else{$tag="1\t0\t0\t0\t";}
-		}
-		elsif($infos{$contig_c}{$gene}{"best_domain_hit"}=~/^PFAM/){$tag="0\t0\t1\t0\t";}
-		else{$tag="0\t0\t0\t1\t";}
-		if ($infos{$contig_c}{$gene}{"length"}<$th_gene_size){$tag.="1\t";}
-		else{$tag.="0\t";}
-		if (($last_strand eq "0") || ($infos{$contig_c}{$gene}{"strand"} eq $last_strand)){$tag.="0\t";}
-		else{$tag.="1\t";}
-		$last_strand=$infos{$contig_c}{$gene}{"strand"};
-		if (($infos{$contig_c}{$gene}{"category"}==0) || ($infos{$contig_c}{$gene}{"category"}==3)){
-			$tag.="1\t";$total_hallmark++;
-			print "Gene $contig_c / $gene -> category $infos{$contig_c}{$gene}{category} -> putative hallmark\n";
-		} # look at putative hallmarklmark
-		else{$tag.="0\t";}
-		print MAP_C "$tag\n";
-	}
-	close MAP_C;
-	### Now go execute the C program
-	my $c_cmd="$path_to_c_script $ref_file $out_file_c $out_file_c2";
-#        print "Step 1 - $c_cmd\n";
-	my $out=`$c_cmd`;
-# 	print "$out\n";
-	$c_cmd="sort -r -n -k 4 $out_file_c2 > $out_file_c3";
-#        print "Step 2 - $c_cmd\n";	
-	$out=`$c_cmd`;
-# 	print "$out\n";
-	### reading the c program output to fill the match hash table / and removing overlap
-	my %match;
-	my %check;
-	my @check_gene;
-	open OUT_C, '<', $out_file_c3;
-	while(<OUT_C>){
-		chomp($_);
-		my @tab=split("\t",$_);
-		my $start=$tab[0];
-		my $last=$tab[0]+$tab[1]-1;
-		my $fragment_id=$contig_c."-".$tab_genes[$start]."-".$tab_genes[$last];
-		my $tag=0;
-		# Code : 0 phage / 1 pfam / 2 unch / 3 size / 4 strand switch
-		if ($tab[2]==0){
-			if (overlap($fragment_id,$check{"phage"})==0){
-				$match{$fragment_id}{"proof"}{"phage"}=$tab[3];
-				$check{"phage"}{$fragment_id}=1;
-				$tag=1;
-				for (my $i=$start;$i<=$last;$i++){$check_gene[$i]++;}
+
+my $num_contigs = scalar(@liste_contigs);
+my $chunk_len = int($num_contigs/$n_cpus)+1;
+print "$chunk_len\n";
+my @grouped = @liste_contigs;
+my $it = natatime $chunk_len, @grouped;
+
+my $pm = Parallel::ForkManager->new($n_cpus); #Starts the parent process for parallelizing the next foreach loop, sets max number of parallel processes
+#$pm->set_waitpid_blocking_sleep(0);
+while (my @vals = $it->()){
+	$pm->start and next; #do the fork
+	foreach(@vals){
+		my $contig_c=$_;
+		my @tab_genes=sort {$infos{$contig_c}{$a}{"order"} <=> $infos{$contig_c}{$b}{"order"}} keys %{$infos{$contig_c}};
+		my $total_nb_genes=$#tab_genes+1;
+		### Preparing data for C program
+		my $out_file_c=$ref_file;
+		$out_file_c=~s/\.refs/.tmp_$$/g; #The variable $$ is the PID for the fork
+		my $out_file_c2=$ref_file;
+		$out_file_c2=~s/\.refs/.out_$$/g;
+		my $out_file_c3=$ref_file;
+		$out_file_c3=~s/\.refs/.out_$$-sorted/g;
+	# 	print "we have $out_file_c $out_file_c2 $out_file_c3\n";
+		open MAP_C, '>', $out_file_c;
+		print MAP_C "$nb_genes{$contig_c}\n";
+		my $last_strand="0";
+		my $total_hallmark=0;
+		my $total_noncaudo=0;
+		foreach(@tab_genes){
+			my $gene=$_;
+			my $tag="";
+			# Line : PC / noncaudo / PFAM / UNCH / SIZE / STRAND / HALLMARK
+			if($infos{$contig_c}{$gene}{"best_domain_hit"}=~/^PC/){
+				if ($infos{$contig_c}{$gene}{"category"}>=3){$tag="1\t1\t0\t0\t";$total_noncaudo++;}
+				else{$tag="1\t0\t0\t0\t";}
 			}
+			elsif($infos{$contig_c}{$gene}{"best_domain_hit"}=~/^PFAM/){$tag="0\t0\t1\t0\t";}
+			else{$tag="0\t0\t0\t1\t";}
+			if ($infos{$contig_c}{$gene}{"length"}<$th_gene_size){$tag.="1\t";}
+			else{$tag.="0\t";}
+			if (($last_strand eq "0") || ($infos{$contig_c}{$gene}{"strand"} eq $last_strand)){$tag.="0\t";}
+			else{$tag.="1\t";}
+			$last_strand=$infos{$contig_c}{$gene}{"strand"};
+			if (($infos{$contig_c}{$gene}{"category"}==0) || ($infos{$contig_c}{$gene}{"category"}==3)){
+				$tag.="1\t";$total_hallmark++;
+				print "Gene $contig_c / $gene -> category $infos{$contig_c}{$gene}{category} -> putative hallmark\n";
+			} # look at putative hallmarklmark
+			else{$tag.="0\t";}
+			print MAP_C "$tag\n";
 		}
-		if ($tab[2]==1){
-			if (overlap($fragment_id,$check{"pfam"})==0){
-				$match{$fragment_id}{"proof"}{"pfam"}=$tab[3];
-				$check{"pfam"}{$fragment_id}=1;
-				$tag=1;
-				for (my $i=$start;$i<=$last;$i++){$check_gene[$i]++;}
-			}
-		}
-		if ($tab[2]==2){
-			if (overlap($fragment_id,$check{"unch"})==0){
-				$match{$fragment_id}{"proof"}{"unch"}=$tab[3];
-				$check{"unch"}{$fragment_id}=1;
-				$tag=1;
-				for (my $i=$start;$i<=$last;$i++){$check_gene[$i]++;}
-			}
-		}
-		if ($tab[2]==3){
-			if (overlap($fragment_id,$check{"avg_g_size"})==0){
-				$match{$fragment_id}{"proof"}{"avg_g_size"}=$tab[3];
-				$check{"avg_g_size"}{$fragment_id}=1;
-				$tag=1;
-			}
-		}
-		if ($tab[2]==4){
-			if (overlap($fragment_id,$check{"switch"})==0){
-				$match{$fragment_id}{"proof"}{"switch"}=$tab[3];
-				$check{"switch"}{$fragment_id}=1;
-				$tag=1;
-			}
-		}
-		if ($tab[2]==5){
-			if (overlap($fragment_id,$check{"noncaudo"})==0){
-				$match{$fragment_id}{"proof"}{"noncaudo"}=$tab[3];
-				$check{"noncaudo"}{$fragment_id}=1;
-				$tag=1;
-				for (my $i=$start;$i<=$last;$i++){$check_gene[$i]++;}
-			}
-		}
-		if ($tag==1){
-			# If a match, we also take the nb of hallmark genes, and the size
-			if ($tab[4]>0){$match{$fragment_id}{"hallmark"}=$tab[4];}
-			$match{$fragment_id}{"size"}=$tab[1];
-		}
-	}
-	close OUT_C;
-	### Ok, we read the C output, no we try (neatly) to merge all predictions for this sequence
-	my $n=0;
-	my %merged_match;
-	my $th_contig_size=$th_nb_genes_covered*$total_nb_genes;
-	my @tab_matches=sort { $match{$b}{"size"} <=> $match{$a}{"size"} } keys %match;
-	if (!defined($match{$tab_matches[0]}{"size"})){} # Not even an interesting region, skip to the next sequence
-	else{
-		my $tag_complete=0;
-		my $i=0;
-		while ($match{$tab_matches[$i]}{"size"}>$th_contig_size && $tag_complete==0){
-			if ($match{$tab_matches[$i]}{"size"}>$th_contig_size && (defined($match{$tab_matches[$i]}{"proof"}{"pfam"}) || defined($match{$tab_matches[$i]}{"proof"}{"phage"}) || defined($match{$tab_matches[$i]}{"proof"}{"unch"}) || defined($match{$tab_matches[$i]}{"proof"}{"noncaudo"}))){ # SEEMS LIKE WE HAVE A COMPLETE PHAGE SEQUENCE 
-				$tag_complete=1;
-				my $fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
-				if (defined($match{$fragment_id})){
-					$merged_match{$fragment_id}=$match{$fragment_id}; # If we indeed have complete metrics, we take themn
+		close MAP_C;
+		### Now go execute the C program
+		my $c_cmd="$path_to_c_script $ref_file $out_file_c $out_file_c2";
+	#        print "Step 1 - $c_cmd\n";
+		my $out=`$c_cmd`;
+	# 	print "$out\n";
+		$c_cmd="sort -r -n -k 4 $out_file_c2 > $out_file_c3";
+	#        print "Step 2 - $c_cmd\n";	
+		$out=`$c_cmd`;
+	# 	print "$out\n";
+		### reading the c program output to fill the match hash table / and removing overlap
+		my %match;
+		my %check;
+		my @check_gene;
+		open OUT_C, '<', $out_file_c3;
+		while(<OUT_C>){
+			chomp($_);
+			my @tab=split("\t",$_);
+			my $start=$tab[0];
+			my $last=$tab[0]+$tab[1]-1;
+			my $fragment_id=$contig_c."-".$tab_genes[$start]."-".$tab_genes[$last];
+			my $tag=0;
+			# Code : 0 phage / 1 pfam / 2 unch / 3 size / 4 strand switch
+			if ($tab[2]==0){
+				if (overlap($fragment_id,$check{"phage"})==0){
+					$match{$fragment_id}{"proof"}{"phage"}=$tab[3];
+					$check{"phage"}{$fragment_id}=1;
+					$tag=1;
+					for (my $i=$start;$i<=$last;$i++){$check_gene[$i]++;}
 				}
-				else{
-					$merged_match{$fragment_id}{"size"}=$total_nb_genes;# Otherwise we store just the size
-					$merged_match{$fragment_id}{"hallmark"}=$total_hallmark;# And the total number of hallmark genes on this fragment
+			}
+			if ($tab[2]==1){
+				if (overlap($fragment_id,$check{"pfam"})==0){
+					$match{$fragment_id}{"proof"}{"pfam"}=$tab[3];
+					$check{"pfam"}{$fragment_id}=1;
+					$tag=1;
+					for (my $i=$start;$i<=$last;$i++){$check_gene[$i]++;}
 				}
-				$merged_match{$fragment_id}{"type"}="complete_phage";# And we store the type of fragment
-				foreach(@tab_matches){
-					my $fragment_id=$_;
-					if ($match{$fragment_id}{"size"}<$total_nb_genes){
-						my $r=get_overlap($fragment_id,\%merged_match);
-						if ($r eq "no"){ # if no overlap
-							$merged_match{$fragment_id}=$match{$fragment_id}; # NO OVERLAP WITH THE COMPLETE 
-							print "!!!!!!!!!!!!!!!!!!! THIS SHOULD NOT BE POSSIBLE\n";
-						}
-						else{
-							# Overlap, we propagate the proof and note it "partial"
-							foreach(keys %{$match{$fragment_id}{"proof"}}){
-								if (defined($merged_match{$r}{"proof"}{$_})){
-									if ($merged_match{$r}{"proof"}{$_}=~/:/){
+			}
+			if ($tab[2]==2){
+				if (overlap($fragment_id,$check{"unch"})==0){
+					$match{$fragment_id}{"proof"}{"unch"}=$tab[3];
+					$check{"unch"}{$fragment_id}=1;
+					$tag=1;
+					for (my $i=$start;$i<=$last;$i++){$check_gene[$i]++;}
+				}
+			}
+			if ($tab[2]==3){
+				if (overlap($fragment_id,$check{"avg_g_size"})==0){
+					$match{$fragment_id}{"proof"}{"avg_g_size"}=$tab[3];
+					$check{"avg_g_size"}{$fragment_id}=1;
+					$tag=1;
+				}
+			}
+			if ($tab[2]==4){
+				if (overlap($fragment_id,$check{"switch"})==0){
+					$match{$fragment_id}{"proof"}{"switch"}=$tab[3];
+					$check{"switch"}{$fragment_id}=1;
+					$tag=1;
+				}
+			}
+			if ($tab[2]==5){
+				if (overlap($fragment_id,$check{"noncaudo"})==0){
+					$match{$fragment_id}{"proof"}{"noncaudo"}=$tab[3];
+					$check{"noncaudo"}{$fragment_id}=1;
+					$tag=1;
+					for (my $i=$start;$i<=$last;$i++){$check_gene[$i]++;}
+				}
+			}
+			if ($tag==1){
+				# If a match, we also take the nb of hallmark genes, and the size
+				if ($tab[4]>0){$match{$fragment_id}{"hallmark"}=$tab[4];}
+				$match{$fragment_id}{"size"}=$tab[1];
+			}
+		}
+		close OUT_C;
+		### Ok, we read the C output, no we try (neatly) to merge all predictions for this sequence
+		my $n=0;
+		my %merged_match;
+		my $th_contig_size=$th_nb_genes_covered*$total_nb_genes;
+		my @tab_matches=sort { $match{$b}{"size"} <=> $match{$a}{"size"} } keys %match;
+		if (!defined($match{$tab_matches[0]}{"size"})){} # Not even an interesting region, skip to the next sequence
+		else{
+			my $tag_complete=0;
+			my $i=0;
+			while ($match{$tab_matches[$i]}{"size"}>$th_contig_size && $tag_complete==0){
+				if ($match{$tab_matches[$i]}{"size"}>$th_contig_size && (defined($match{$tab_matches[$i]}{"proof"}{"pfam"}) || defined($match{$tab_matches[$i]}{"proof"}{"phage"}) || defined($match{$tab_matches[$i]}{"proof"}{"unch"}) || defined($match{$tab_matches[$i]}{"proof"}{"noncaudo"}))){ # SEEMS LIKE WE HAVE A COMPLETE PHAGE SEQUENCE 
+					$tag_complete=1;
+					my $fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
+					if (defined($match{$fragment_id})){
+						$merged_match{$fragment_id}=$match{$fragment_id}; # If we indeed have complete metrics, we take themn
+					}
+					else{
+						$merged_match{$fragment_id}{"size"}=$total_nb_genes;# Otherwise we store just the size
+						$merged_match{$fragment_id}{"hallmark"}=$total_hallmark;# And the total number of hallmark genes on this fragment
+					}
+					$merged_match{$fragment_id}{"type"}="complete_phage";# And we store the type of fragment
+					foreach(@tab_matches){
+						my $fragment_id=$_;
+						if ($match{$fragment_id}{"size"}<$total_nb_genes){
+							my $r=get_overlap($fragment_id,\%merged_match);
+							if ($r eq "no"){ # if no overlap
+								$merged_match{$fragment_id}=$match{$fragment_id}; # NO OVERLAP WITH THE COMPLETE 
+								print "!!!!!!!!!!!!!!!!!!! THIS SHOULD NOT BE POSSIBLE\n";
+							}
+							else{
+								# Overlap, we propagate the proof and note it "partial"
+								foreach(keys %{$match{$fragment_id}{"proof"}}){
+									if (defined($merged_match{$r}{"proof"}{$_})){
+										if ($merged_match{$r}{"proof"}{$_}=~/:/){
+											$fragment_id=~/.*-(gene_\d*-gene_\d*)/;
+											$merged_match{$r}{"proof"}{$_}.=$1.":".$match{$fragment_id}{"proof"}{$_}.",";
+										}
+										else{} # already a score for the entire match, no pblm
+									} 
+									else {
 										$fragment_id=~/.*-(gene_\d*-gene_\d*)/;
-										$merged_match{$r}{"proof"}{$_}.=$1.":".$match{$fragment_id}{"proof"}{$_}.",";
+										$merged_match{$r}{"proof"}{$_}=$1.":".$match{$fragment_id}{"proof"}{$_}.",";
 									}
-									else{} # already a score for the entire match, no pblm
-								} 
-								else {
-									$fragment_id=~/.*-(gene_\d*-gene_\d*)/;
-									$merged_match{$r}{"proof"}{$_}=$1.":".$match{$fragment_id}{"proof"}{$_}.",";
 								}
 							}
 						}
 					}
 				}
+				$i++;
 			}
-			$i++;
-		}
-		if($tag_complete==0){ # No complete phage, putatively one or several prophages
-			# First get all the phage region
-			# We look for interesting regions   my $fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
-			my $tag=-1;
-			my $tag_h=0;
-			for (my $i=0;$i<$total_nb_genes;$i++){
-				if ($tag>=0 && (!defined($check_gene[$i]) || $check_gene[$i]<1)){ # end of an interesting region
-					my $fragment_id.=$contig_c."-".$tab_genes[$tag]."-".$tab_genes[$i-1];
+			if($tag_complete==0){ # No complete phage, putatively one or several prophages
+				# First get all the phage region
+				# We look for interesting regions   my $fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
+				my $tag=-1;
+				my $tag_h=0;
+				for (my $i=0;$i<$total_nb_genes;$i++){
+					if ($tag>=0 && (!defined($check_gene[$i]) || $check_gene[$i]<1)){ # end of an interesting region
+						my $fragment_id.=$contig_c."-".$tab_genes[$tag]."-".$tab_genes[$i-1];
+						if ($merged_match{$fragment_id}{"size"}>$th_contig_size){ # Complete phage
+							$fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
+							$merged_match{$fragment_id}{"type"}="complete_phage";
+							$merged_match{$fragment_id}{"size"}=$total_nb_genes;
+							$merged_match{$fragment_id}{"hallmark"}=$tag_h;
+						} 
+						else{ # Prophage
+							$merged_match{$fragment_id}{"size"}=$i-$tag;
+							$merged_match{$fragment_id}{"type"}="prophage";
+							$merged_match{$fragment_id}{"hallmark"}=$tag_h;
+						}
+						$tag=-1;
+						$tag_h=0;
+					}
+					elsif ($tag==-1 && $check_gene[$i]>=1){
+						$tag=$i;
+						$tag_h=0;
+					}
+					if ($infos{$contig_c}{$tab_genes[$i]}{"category"}==0 || $infos{$contig_c}{$tab_genes[$i]}{"category"}==3){$tag_h++;} # look at putative hallmark
+				}
+				if ($tag>=0){
+					my $fragment_id.=$contig_c."-".$tab_genes[$tag]."-".$tab_genes[$#tab_genes];
+					print "Region is $fragment_id ..";
 					if ($merged_match{$fragment_id}{"size"}>$th_contig_size){ # Complete phage
+						print "which is a complete phage\n";
 						$fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
 						$merged_match{$fragment_id}{"type"}="complete_phage";
 						$merged_match{$fragment_id}{"size"}=$total_nb_genes;
 						$merged_match{$fragment_id}{"hallmark"}=$tag_h;
 					} 
 					else{ # Prophage
-						$merged_match{$fragment_id}{"size"}=$i-$tag;
+						print "which is a prophage\n";
+						$merged_match{$fragment_id}{"size"}=$total_nb_genes-$tag;
 						$merged_match{$fragment_id}{"type"}="prophage";
 						$merged_match{$fragment_id}{"hallmark"}=$tag_h;
 					}
-					$tag=-1;
-					$tag_h=0;
 				}
-				elsif ($tag==-1 && $check_gene[$i]>=1){
-					$tag=$i;
-					$tag_h=0;
-				}
-				if ($infos{$contig_c}{$tab_genes[$i]}{"category"}==0 || $infos{$contig_c}{$tab_genes[$i]}{"category"}==3){$tag_h++;} # look at putative hallmark
-			}
-			if ($tag>=0){
-				my $fragment_id.=$contig_c."-".$tab_genes[$tag]."-".$tab_genes[$#tab_genes];
-				print "Region is $fragment_id ..";
-				if ($merged_match{$fragment_id}{"size"}>$th_contig_size){ # Complete phage
-					print "which is a complete phage\n";
-					$fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
-					$merged_match{$fragment_id}{"type"}="complete_phage";
-					$merged_match{$fragment_id}{"size"}=$total_nb_genes;
-					$merged_match{$fragment_id}{"hallmark"}=$tag_h;
-				} 
-				else{ # Prophage
-					print "which is a prophage\n";
-					$merged_match{$fragment_id}{"size"}=$total_nb_genes-$tag;
-					$merged_match{$fragment_id}{"type"}="prophage";
-					$merged_match{$fragment_id}{"hallmark"}=$tag_h;
-				}
-			}
-			# Now we merge the annotation in these regions
-			foreach(@tab_matches){
-				my $fragment_id=$_;
-				# Check if overlap
-				my $r=get_overlap($fragment_id,\%merged_match);
-				if ($r eq "no"){ } # if no overlap # not in an interesting region 
-				else{
-					# Overlap, we propagate the proof and note it "partial"
-					foreach(keys %{$match{$fragment_id}{"proof"}}){
-						if (defined($merged_match{$r}{"proof"}{$_})){
-							if ($merged_match{$r}{"proof"}{$_}=~/:/){
+				# Now we merge the annotation in these regions
+				foreach(@tab_matches){
+					my $fragment_id=$_;
+					# Check if overlap
+					my $r=get_overlap($fragment_id,\%merged_match);
+					if ($r eq "no"){ } # if no overlap # not in an interesting region 
+					else{
+						# Overlap, we propagate the proof and note it "partial"
+						foreach(keys %{$match{$fragment_id}{"proof"}}){
+							if (defined($merged_match{$r}{"proof"}{$_})){
+								if ($merged_match{$r}{"proof"}{$_}=~/:/){
+									$fragment_id=~/.*-(gene_\d*-gene_\d*)/;
+									$merged_match{$r}{"proof"}{$_}.=$1.":".$match{$fragment_id}{"proof"}{$_}.",";
+								}
+								else{} # already a score for the entire match, no pblm
+							} 
+							else {
 								$fragment_id=~/.*-(gene_\d*-gene_\d*)/;
-								$merged_match{$r}{"proof"}{$_}.=$1.":".$match{$fragment_id}{"proof"}{$_}.",";
+								$merged_match{$r}{"proof"}{$_}=$1.":".$match{$fragment_id}{"proof"}{$_}.",";
 							}
-							else{} # already a score for the entire match, no pblm
-						} 
-						else {
-							$fragment_id=~/.*-(gene_\d*-gene_\d*)/;
-							$merged_match{$r}{"proof"}{$_}=$1.":".$match{$fragment_id}{"proof"}{$_}.",";
+						}
+						delete($match{$fragment_id});
+					}
+				}
+				## New addition that should help to get the prophage coordinates correctly !
+				# And now check if one of the prophage map to the whole sequence
+				foreach(keys %merged_match){
+					print "This is a prophage\n";
+					my $fragment_id=$_;
+					if ($merged_match{$fragment_id}{"size"}>$th_contig_size){
+						$tag_complete=1;
+						my $new_fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
+						print "We have a complete prophage -- we add it $new_fragment_id !\n";
+						# <STDIN>;
+						foreach(keys %{$merged_match{$fragment_id}}){
+							$merged_match{$new_fragment_id}{$_}=$merged_match{$fragment_id}{$_};
+						}
+						$merged_match{$new_fragment_id}{"type"}="complete_phage";# And we store the type of fragment
+					}
+				}
+				if ($tag_complete==1){
+					# We can remove all the prophages
+					my @tab_temp=keys %merged_match;
+					foreach(@tab_temp){
+						if ($merged_match{$_}{"type"} eq "complete_phage"){}
+						else{
+							delete($merged_match{$_});
 						}
 					}
-					delete($match{$fragment_id});
 				}
+				## END OF THE NEW ADDITION
 			}
-			## New addition that should help to get the prophage coordinates correctly !
-			# And now check if one of the prophage map to the whole sequence
-			foreach(keys %merged_match){
-				print "This is a prophage\n";
+			open S1, '>>', $out_file;
+			foreach(sort { $merged_match{$b}{"size"} <=> $merged_match{$a}{"size"} } keys %merged_match){ ## IMPORTANT, HAVE TO BE SIZE ORDERED
 				my $fragment_id=$_;
-				if ($merged_match{$fragment_id}{"size"}>$th_contig_size){
-					$tag_complete=1;
-					my $new_fragment_id=$contig_c."-".$tab_genes[0]."-".$tab_genes[$#tab_genes];
-					print "We have a complete prophage -- we add it $new_fragment_id !\n";
-					# <STDIN>;
-					foreach(keys %{$merged_match{$fragment_id}}){
-						$merged_match{$new_fragment_id}{$_}=$merged_match{$fragment_id}{$_};
-					}
-					$merged_match{$new_fragment_id}{"type"}="complete_phage";# And we store the type of fragment
-				}
-			}
-			if ($tag_complete==1){
-				# We can remove all the prophages
-				my @tab_temp=keys %merged_match;
-				foreach(@tab_temp){
-					if ($merged_match{$_}{"type"} eq "complete_phage"){}
-					else{
-						delete($merged_match{$_});
-					}
-				}
-			}
-			## END OF THE NEW ADDITION
-		}
-		open S1, '>>', $out_file;
-		foreach(sort { $merged_match{$b}{"size"} <=> $merged_match{$a}{"size"} } keys %merged_match){ ## IMPORTANT, HAVE TO BE SIZE ORDERED
-			my $fragment_id=$_;
-			$fragment_id=~/.*-(gene_\d+-gene_\d+)/;
-			my $zone=$1;
-			my $type_detection=$merged_match{$fragment_id}{"type"};
-			print "$fragment_id\t$merged_match{$fragment_id}{size}\t$merged_match{$fragment_id}{hallmark}\t$merged_match{$fragment_id}{proof}{phage}\t$merged_match{$fragment_id}{proof}{pfam}\t$merged_match{$fragment_id}{proof}{unch}\t$merged_match{$fragment_id}{proof}{switch}\t$merged_match{$fragment_id}{proof}{avg_g_size}\n";
-			my $category=3;
-			if ($merged_match{$fragment_id}{"hallmark"}==0){delete($merged_match{$fragment_id}{"hallmark"});}
-			# Determine the category. To check this, we want several good indicators - And also remove prediction based on one single indicator, unless it's a strong one (sig >2)
-			# New categories : 
-			# Cat 1 - hallmark + gene phage enrichment
-			# Cat 2 - gene phage or hallmark without gene phage
-			# Cat 3 - no hallmark or gene phage, but other signal
-			my @tab_proof=keys %{$merged_match{$fragment_id}{"proof"}};
-			if ($merged_match{$fragment_id}{"hallmark"}>0){
-				if (defined($merged_match{$fragment_id}{"proof"}{"noncaudo"}) || defined($merged_match{$fragment_id}{"proof"}{"phage"})){
-					if ($merged_match{$fragment_id}{"proof"}{"noncaudo"}=~/(gene_\d+-gene_\d+):(\d+)/){
-						my $match_region=$1;
-						my $score=$2;
-						if ($match_region eq $zone && $score>=$th_sig){$category=1;} # Phage metric on the whole region
-					}
-					elsif ($merged_match{$fragment_id}{"proof"}{"noncaudo"}>=$th_sig){$category=1;} # if we have hallmark or gene_size + a phage metric on the whole fragment -> should be quite sure $category=1; ## THRESHOLD TO REMOVE THE NONCAUDO ON THE SMALL SMALL CONTIGS
-					if ($merged_match{$fragment_id}{"proof"}{"phage"}=~/(gene_\d+-gene_\d+):(\d+)/){
-						my $match_region=$1;
-						my $score=$2;
-						if ($match_region eq $zone && $score>=$th_sig){$category=1;} # Phage metric on the whole region
-					}
-					elsif ($merged_match{$fragment_id}{"proof"}{"phage"}>=$th_sig){$category=1;} # if we have hallmark or gene_size + a phage metric on the whole fragment -> should be quite sure $category=1;
-					if ($category==3){ # no match complete, so category 2
-						$category=2;
-					}
-				}
-				else{
-					foreach(@tab_proof){
-						if ($merged_match{$fragment_id}{"proof"}{$_}=~/(gene_\d+-gene_\d+):(\d+)/){
+				$fragment_id=~/.*-(gene_\d+-gene_\d+)/;
+				my $zone=$1;
+				my $type_detection=$merged_match{$fragment_id}{"type"};
+				print "$fragment_id\t$merged_match{$fragment_id}{size}\t$merged_match{$fragment_id}{hallmark}\t$merged_match{$fragment_id}{proof}{phage}\t$merged_match{$fragment_id}{proof}{pfam}\t$merged_match{$fragment_id}{proof}{unch}\t$merged_match{$fragment_id}{proof}{switch}\t$merged_match{$fragment_id}{proof}{avg_g_size}\n";
+				my $category=3;
+				if ($merged_match{$fragment_id}{"hallmark"}==0){delete($merged_match{$fragment_id}{"hallmark"});}
+				# Determine the category. To check this, we want several good indicators - And also remove prediction based on one single indicator, unless it's a strong one (sig >2)
+				# New categories : 
+				# Cat 1 - hallmark + gene phage enrichment
+				# Cat 2 - gene phage or hallmark without gene phage
+				# Cat 3 - no hallmark or gene phage, but other signal
+				my @tab_proof=keys %{$merged_match{$fragment_id}{"proof"}};
+				if ($merged_match{$fragment_id}{"hallmark"}>0){
+					if (defined($merged_match{$fragment_id}{"proof"}{"noncaudo"}) || defined($merged_match{$fragment_id}{"proof"}{"phage"})){
+						if ($merged_match{$fragment_id}{"proof"}{"noncaudo"}=~/(gene_\d+-gene_\d+):(\d+)/){
 							my $match_region=$1;
 							my $score=$2;
-							print "Hallmark but no phage or noncaudo, but other proof $_ -> $match_region / $score ($merged_match{$fragment_id}{proof}{$_})\n";
-							if ($match_region eq $zone && $score>=$th_sig){$category=2;} # other metric on the whole region
-							elsif($score>=$th_sig_2){$category=2;} # metric partial only but strong enough so we keep it
+							if ($match_region eq $zone && $score>=$th_sig){$category=1;} # Phage metric on the whole region
 						}
-						elsif ($merged_match{$fragment_id}{"proof"}{$_}>=$th_sig){
-							if ($_ eq "pfam" || $_ eq "unch"){
-								$category=2; # if we have hallmark or gene_size + a metric pfam or unch on the whole fragment -> should be quite sure
+						elsif ($merged_match{$fragment_id}{"proof"}{"noncaudo"}>=$th_sig){$category=1;} # if we have hallmark or gene_size + a phage metric on the whole fragment -> should be quite sure $category=1; ## THRESHOLD TO REMOVE THE NONCAUDO ON THE SMALL SMALL CONTIGS
+						if ($merged_match{$fragment_id}{"proof"}{"phage"}=~/(gene_\d+-gene_\d+):(\d+)/){
+							my $match_region=$1;
+							my $score=$2;
+							if ($match_region eq $zone && $score>=$th_sig){$category=1;} # Phage metric on the whole region
+						}
+						elsif ($merged_match{$fragment_id}{"proof"}{"phage"}>=$th_sig){$category=1;} # if we have hallmark or gene_size + a phage metric on the whole fragment -> should be quite sure $category=1;
+						if ($category==3){ # no match complete, so category 2
+							$category=2;
+						}
+					}
+					else{
+						foreach(@tab_proof){
+							if ($merged_match{$fragment_id}{"proof"}{$_}=~/(gene_\d+-gene_\d+):(\d+)/){
+								my $match_region=$1;
+								my $score=$2;
+								print "Hallmark but no phage or noncaudo, but other proof $_ -> $match_region / $score ($merged_match{$fragment_id}{proof}{$_})\n";
+								if ($match_region eq $zone && $score>=$th_sig){$category=2;} # other metric on the whole region
+								elsif($score>=$th_sig_2){$category=2;} # metric partial only but strong enough so we keep it
+							}
+							elsif ($merged_match{$fragment_id}{"proof"}{$_}>=$th_sig){
+								if ($_ eq "pfam" || $_ eq "unch"){
+									$category=2; # if we have hallmark or gene_size + a metric pfam or unch on the whole fragment -> should be quite sure
+								}
 							}
 						}
 					}
 				}
-			}
-			elsif (defined($merged_match{$fragment_id}{"proof"}{"phage"}) || defined($merged_match{$fragment_id}{"proof"}{"noncaudo"})){# If we have some phage signal, 
-				if ($merged_match{$fragment_id}{"proof"}{"phage"}=~/:(\d*)/){
-					if ($1>=$th_sig){
+				elsif (defined($merged_match{$fragment_id}{"proof"}{"phage"}) || defined($merged_match{$fragment_id}{"proof"}{"noncaudo"})){# If we have some phage signal, 
+					if ($merged_match{$fragment_id}{"proof"}{"phage"}=~/:(\d*)/){
+						if ($1>=$th_sig){
+							$category=2; # Good, phage signal significant -> should be quite sure
+						}
+					} 
+					elsif($merged_match{$fragment_id}{"proof"}{"phage"}>=$th_sig){
 						$category=2; # Good, phage signal significant -> should be quite sure
 					}
-				} 
-				elsif($merged_match{$fragment_id}{"proof"}{"phage"}>=$th_sig){
-					$category=2; # Good, phage signal significant -> should be quite sure
-				}
-				if ($merged_match{$fragment_id}{"proof"}{"noncaudo"}=~/:(\d*)/){ ## THRESHOLD TO AVOID SHORT CONTIGS BIAS
-					if ($1>=$th_sig && $total_noncaudo>$th_nb_genes_noncaudo){
+					if ($merged_match{$fragment_id}{"proof"}{"noncaudo"}=~/:(\d*)/){ ## THRESHOLD TO AVOID SHORT CONTIGS BIAS
+						if ($1>=$th_sig && $total_noncaudo>$th_nb_genes_noncaudo){
+							$category=2; # Good, phage signal significant -> should be quite sure
+						}
+					} 
+					elsif($merged_match{$fragment_id}{"proof"}{"noncaudo"}>=$th_sig && $total_noncaudo>$th_nb_genes_noncaudo){ ## THRESHOLD TO AVOID SHORT CONTIGS BIAS
 						$category=2; # Good, phage signal significant -> should be quite sure
 					}
-				} 
-				elsif($merged_match{$fragment_id}{"proof"}{"noncaudo"}>=$th_sig && $total_noncaudo>$th_nb_genes_noncaudo){ ## THRESHOLD TO AVOID SHORT CONTIGS BIAS
-					$category=2; # Good, phage signal significant -> should be quite sure
 				}
-			}
-			if ($category==3){ # If the category is still 3, meaning that the phage signal (if there was any) was not that strong ..
-				if ($#tab_proof==0){
-					$category=0; # No phage signal nor hallmark gene, and only one metric, we remove
-				}
-				else{
-					my $tag1=0;
-					foreach(@tab_proof){
-						if ($merged_match{$fragment_id}{"proof"}{$_}=~/:(\d*)/){
-							if ($1>=$th_sig_2){
+				if ($category==3){ # If the category is still 3, meaning that the phage signal (if there was any) was not that strong ..
+					if ($#tab_proof==0){
+						$category=0; # No phage signal nor hallmark gene, and only one metric, we remove
+					}
+					else{
+						my $tag1=0;
+						foreach(@tab_proof){
+							if ($merged_match{$fragment_id}{"proof"}{$_}=~/:(\d*)/){
+								if ($1>=$th_sig_2){
+									$tag1=1; # Good, one signal very significant 
+								}
+							} 
+							elsif ($merged_match{$fragment_id}{"proof"}{$_}>=$th_sig_2){
 								$tag1=1; # Good, one signal very significant 
 							}
-						} 
-						elsif ($merged_match{$fragment_id}{"proof"}{$_}>=$th_sig_2){
-							$tag1=1; # Good, one signal very significant 
+						}
+						if ($tag1==0){ # If none of the metrics is really strong ...
+							$category=0; # .. we remove the detection
 						}
 					}
-					if ($tag1==0){ # If none of the metrics is really strong ...
-						$category=0; # .. we remove the detection
-					}
+				}
+				# Columns index :  0  /     1        /     2    /   3   /      4        /    5     /     6        /      7            /    8         /      9       /     10     /    11     /       12
+				# Columns : Contig / Total Nb Genes / Fragment / Size / Type detection / Category /  Enrich Phage / Enrich Non Caudo / Enrich Pfam / Enrich Unch / Enrich Switch / Avg_g_size / Nb Hallmark
+				if ($category>0){
+					print S1 "$contig_c\t$total_nb_genes\t$fragment_id\t$merged_match{$fragment_id}{size}\t$type_detection\t$category\t$merged_match{$fragment_id}{proof}{phage}\t$merged_match{$fragment_id}{proof}{noncaudo}\t$merged_match{$fragment_id}{proof}{pfam}\t$merged_match{$fragment_id}{proof}{unch}\t$merged_match{$fragment_id}{proof}{switch}\t$merged_match{$fragment_id}{proof}{avg_g_size}\t$merged_match{$fragment_id}{hallmark}\n";
 				}
 			}
-			# Columns index :  0  /     1        /     2    /   3   /      4        /    5     /     6        /      7            /    8         /      9       /     10     /    11     /       12
-			# Columns : Contig / Total Nb Genes / Fragment / Size / Type detection / Category /  Enrich Phage / Enrich Non Caudo / Enrich Pfam / Enrich Unch / Enrich Switch / Avg_g_size / Nb Hallmark
-			if ($category>0){
-				print S1 "$contig_c\t$total_nb_genes\t$fragment_id\t$merged_match{$fragment_id}{size}\t$type_detection\t$category\t$merged_match{$fragment_id}{proof}{phage}\t$merged_match{$fragment_id}{proof}{noncaudo}\t$merged_match{$fragment_id}{proof}{pfam}\t$merged_match{$fragment_id}{proof}{unch}\t$merged_match{$fragment_id}{proof}{switch}\t$merged_match{$fragment_id}{proof}{avg_g_size}\t$merged_match{$fragment_id}{hallmark}\n";
-			}
+			close S1;
 		}
-		close S1;
+	#	$i++;
+		`rm $out_file_c $out_file_c2 $out_file_c3`;
 	}
-	$i++;
-	`rm $out_file_c $out_file_c2 $out_file_c3`;
+	$pm->finish(0); # do the exit in the child process
 }
+$pm->wait_all_children; # wait until everything in the above foreach loop is done before moving on
 
 sub factorial { # factorial $n
 	my $n = shift;
