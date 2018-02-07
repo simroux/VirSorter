@@ -341,6 +341,7 @@ close S1;
 my $tag=0;
 
 my $pm = new Parallel::ForkManager($n_cpus); #Starts the parent process for parallelizing the next foreach loop, sets max number of parallel processes
+$pm->set_waitpid_blocking_sleep(0);
 foreach(sort keys %clusters){
 	$pm->start and next; #do the fork
 #	$tag=1;
@@ -375,7 +376,7 @@ foreach(sort keys %clusters){
 	`rm $muscle_out $muscle_err`;
 	$pm->finish; # do the exit in the child process
 }
-$pm->wait_all_children; # wait until everything in the above foreach loop is done before moving on
+#$pm->wait_all_children; # wait until everything in the above foreach loop is done before moving on
 # We pool all hmm / fasta from all PCs
 $out=`cat $db_phage > $db_out/Pool_clusters.hmm`;
 print "cat previous hmm : $out\n";

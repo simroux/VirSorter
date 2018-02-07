@@ -85,7 +85,7 @@ $out=`$cmd_cat`;
 print "Cat : $cmd_cat\n";
 # BLAST des unclustered et des new contre les new
 my $out_blast=catfile($r_dir, "pool_unclustered-and-new-proteins-vs-new-proteins.tab");
-my $cmd_blast="$path_to_blastp -query $pool_new -db $db -out $out_blast -outfmt 6 --num_threads $n_cpus -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
+my $cmd_blast="$path_to_blastp -query $pool_new -db $db -out $out_blast -outfmt 6 -num_threads $n_cpus -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
 print "$cmd_blast\n";
 $out=`$cmd_blast`;
 print "Blast : $out\n";
@@ -212,6 +212,7 @@ close S1;
 #my $tag=0;
 
 my $pm = new Parallel::ForkManager($n_cpus); #Starts the parent process for parallelizing the next foreach loop, sets max number of parallel processes
+$pm->set_waitpid_blocking_sleep(0);
 foreach(sort keys %clusters){
 	$pm->start and next; #do the fork
 #	$tag=1;
@@ -247,7 +248,7 @@ foreach(sort keys %clusters){
 	`rm $muscle_out $muscle_err`;
 	$pm->finish(0); # do the exit in the child process
 }
-$pm->wait_all_children; # wait until everything in the above foreach loop is done before moving on
+#$pm->wait_all_children; # wait until everything in the above foreach loop is done before moving on
 
 my @tab_hmm=<$r_dir/clusts/*.hmm>;
 if ($#tab_hmm>=0){
