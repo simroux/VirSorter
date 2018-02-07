@@ -14,7 +14,7 @@ Options:
   --cp           Custom phage sequence 
   --db           Either "1" (DEFAULT Refseqdb) or "2" (Viromedb)
   --wdir         Working directory (DEFAULT cwd)
-  --ncpu         Number of CPUs
+  --ncpu         Number of CPUs (default: 4)
   --virome       Virome decontamination mode, for datasets mostly viral, force 
                  the use of generic metrics instead of calculated from the whole 
                  dataset. Set to 1 to use virome decontamination mode (default: 0)
@@ -47,7 +47,7 @@ my $choice_database = 1;
 my $tag_virome      = 0;
 my $custom_phage    = '';
 my $data_dir        = '/data';
-my $n_cpus          = 16;
+my $n_cpus          = 4;
 my $wdir            = catdir(cwd(), 'virsorter-out');
 
 GetOptions(
