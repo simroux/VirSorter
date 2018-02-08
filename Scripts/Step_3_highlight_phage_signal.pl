@@ -11,7 +11,7 @@ use List::MoreUtils qw(natatime);
 # Argument 0 : csv file of the contigs
 # Argument 1 : summary file of the phage fragments
 # Argument 2 : number of CPUs to use in parallel processing of sliding window analysis
-if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[2])))
+if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[1])) || (!defined($ARGV[2])))
 {
 	print "# Script to measure metrics on the sliding window
 # Argument 0 : csv file of the contigs
@@ -28,7 +28,7 @@ if ( -e $out_file ) { `rm $out_file`; }
 my $ref_file = $ARGV[0];
 $ref_file =~ s/\.csv/.refs/g;
 my $do_ref_estimation = 0;
-if (defined($ARGV[2])){
+if (defined($ARGV[3])){
 #	$ref_file=$ARGV[3];
 	`cp $ARGV[3] $ref_file`; # That way, the ref file is in the result directory if a use wants to check it
 	$do_ref_estimation=1;
