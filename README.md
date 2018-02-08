@@ -21,9 +21,10 @@ The categories of virus clusters represent the range of genomes in which this vi
 * First install [Anaconda or Miniconda](https://conda.io/docs/user-guide/install/index.html)
 * Download the databases required by VirSorter which have been converted to be used with HMMER version 3.1b2. Change to the directory where you want the databases be, and then run the following commands:
 ```
-wget .... #add in source when uploaded
-md5sum virsorter-data.tar.gz  #md5sum should return dd12af7d13da0a85df0a9106e9346b45
-tar -xvzf virsorter-data.tar.gz
+wget https://zenodo.org/record/1168727/files/virsorter-data-v2.tar.gz
+md5sum virsorter-data-v2.tar.gz
+#m5sum should return dd12af7d13da0a85df0a9106e9346b45
+tar -xvzf virsorter-data-v2.tar.gz
 ```
 * Create and install your conda virtual environment. Change to the directory where you want VirSorter to be installed and run the following commands:
 ```
