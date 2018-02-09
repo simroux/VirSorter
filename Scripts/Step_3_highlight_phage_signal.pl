@@ -42,7 +42,7 @@ my $th_nb_genes_covered=0.80;
 my $th_nb_genes_noncaudo=1;
 ## END OF ABSOLUTE THRESHOLDS ##
 my $script_dir= catfile($Bin);
-my $path_to_c_script= catfile($script_dir, "Sliding_windows_4");
+my $path_to_c_script= catfile($script_dir, "Sliding_windows_3");
 
 print "## Taking information from the contig info file ($csv_file)\n";
 open F1, '<', $csv_file;
@@ -238,7 +238,7 @@ while (my @vals = $it->()){
 	# 	print "$out\n";
 		### reading the c program output to fill the match hash table / and removing overlap
 		## Now go execute the C program
-		my $path_to_c_script= catfile($script_dir, "Sliding_windows_4");
+		my $path_to_c_script= catfile($script_dir, "Sliding_windows_3");
 		my $c_cmd="echo \"$line_input\" | $path_to_c_script | sort -r -n -k 4 ";
 		my $out=`$c_cmd`;
 		print "$out\n";
