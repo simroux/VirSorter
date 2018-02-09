@@ -28,7 +28,7 @@ tar -xvzf virsorter-data-v2.tar.gz
 ```
 * Create and install your conda virtual environment. Change to the directory where you want VirSorter to be installed and run the following commands:
 ```
-conda create --name virsorter -c bioconda mcl=14.137 muscle blast perl-bioperl perl-file-which hmmer=3.1b2 perl-parallel-forkmanager perl-list-moreutils
+conda create --name virsorter -c bioconda mcl=14.137 muscle blast perl-bioperl perl-file-which hmmer=3.1b2 perl-parallel-forkmanager perl-list-moreutils diamond
 git clone https://github.com/simroux/VirSorter.git
 cd VirSorter/Scripts
 make
@@ -78,7 +78,7 @@ Install the following into a "bin" directory:
 * Metagene Annotator (http://metagene.nig.ac.jp/metagene/download_mga.html)
 * MUSCLE (http://www.drive5.com/muscle/)
 * BLAST+ (ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/)
-
+* DIAMOND (https://github.com/bbuchfink/diamond)
 
 ## Data Container
 

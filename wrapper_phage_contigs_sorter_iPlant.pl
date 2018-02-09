@@ -15,11 +15,14 @@ Options:
   --db           Either "1" (DEFAULT Refseqdb) or "2" (Viromedb)
   --wdir         Working directory (DEFAULT cwd)
   --ncpu         Number of CPUs (default: 4)
-  --virome       Virome decontamination mode, for datasets mostly viral, force 
-                 the use of generic metrics instead of calculated from the whole 
-                 dataset. Set to 1 to use virome decontamination mode (default: 0)
+  --virome       Add this flag to enable virome decontamination mode, for datasets
+                 mostly viral to force the use of generic metrics instead of 
+                 calculated from the whole dataset. (default: off)
   --data-dir     Path to "virsorter-data" directory (e.g. /path/to/virsorter-data)
-
+  --diamond      Use diamond (in "--more-sensitive" mode) instead of blastp. 
+                 Diamond is much faster than blastp and may be useful for adding 
+		 many custom phages, or for processing extremely large Fasta files. 
+		 Unless you specify --diamond, VirSorter will use blastp.
   --help         Show help and exit
 
 =head1 DESCRIPTION
@@ -49,16 +52,19 @@ my $custom_phage    = '';
 my $data_dir        = '/data';
 my $n_cpus          = 4;
 my $wdir            = catdir(cwd(), 'virsorter-out');
+my $diamond         = 0;
+my $blastp          = 'blastp';
 
 GetOptions(
    'f|fna=s'     => \$input_file,
    'd|dataset:s' => \$code_dataset,
    'db:i'        => \$choice_database,
-   'virome:i'    => \$tag_virome,
+   'virome'      => \$tag_virome,
    'wdir:s'      => \$wdir,
    'cp:s'        => \$custom_phage,
    'data-dir:s'  => \$data_dir,
    'ncpu:i'      => \$n_cpus,
+   'diamond'     => \$diamond,
    'h|help'      => \$help,
 );
 
@@ -74,6 +80,10 @@ if ($choice_database < 1 || $choice_database > 3) {
     pod2usage('choice_database must be 1, 2, or 3');
 }
 
+if ($diamond == 1) {
+    $blastp = 'diamond'
+}
+
 say map { sprintf "%-15s: %s\n", @$_ } (
     ['Bin',           $Bin],
     ['Dataset',       $code_dataset],
@@ -83,23 +93,31 @@ say map { sprintf "%-15s: %s\n", @$_ } (
     ['Custom phages', $custom_phage],
     ['Data dir',      $data_dir],
     ['Num CPUs',      $n_cpus],
+    ['blastp',        $blastp],
 );
 
+if ($diamond == 1) {
+    say "This VirSorter run uses DIAMOND (Buchfink et al., Nature Methods 2015) instead of blastp.\n";
+}
 if ($tag_virome == 1) {
     say "WARNING: THIS WILL BE A VIROME DECONTAMINATION RUN";
 }
 
 # Need 2 databases
 # PCs from Refseq (phages) or PCs from Refseq+Viromes
-# PFAM (26.0)
+# PFAM (27.0)
 
 my $path_hmmsearch     = which('hmmsearch') or die "Missing hmmsearch\n";
 my $path_blastp        = which('blastp')    or die "Missing blastp\n";
+my $path_diamond       = '';
 my $script_dir         = catdir($Bin, 'Scripts');
 my $dir_Phage_genes    = catdir($data_dir,'Phage_gene_catalog');
 my $readme_file        = catfile($data_dir, 'VirSorter_Readme.txt');
 my $ref_phage_clusters = catfile($data_dir,
                          'Phage_gene_catalog', 'Phage_Clusters_current.tab');
+if ($diamond == 1) {
+    $path_diamond      = which('diamond')   or die "Missing diamond\n";
+}
 
 if ($tag_virome == 1) {
     $readme_file = catfile($data_dir, 'VirSorter_Readme_viromes.txt');
@@ -288,9 +306,19 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
                 my $script_custom_phage = catfile(
                     $script_dir, "Step_first_add_custom_phage_sequence.pl"
                 );
-                $out = `$script_custom_phage $custom_phage $dir_Phage_genes/ $dir_revision/db $n_cpus >> $log_out 2>> $log_err`;
-
-                say "Adding custom phage to the database : $out";
+                my $add_first = join(' ',
+                    "$script_custom_phage $custom_phage $dir_Phage_genes/",
+                    "$dir_revision/db $n_cpus >> $log_out 2>> $log_err"
+                );
+                if ($diamond == 1) {
+                    $add_first = join(' ',
+		            "$script_custom_phage $custom_phage $dir_Phage_genes/",
+			        "$dir_revision/db $n_cpus diamond >> $log_out 2>> $log_err"
+                    );
+		        }
+				    
+                say "Adding custom phage to the database : \n$add_first\n";
+                $out = `$add_first`;
             }
             # should replace Pool_cluster / Pool_unclustered and
             # Pool_new_unclustered else , we just import the Refseq database
@@ -307,8 +335,14 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
                 "$script_new_cluster $dir_revision $fasta_file_prots",
                 "$previous_fasta_unclustered",
                 "$new_prots_to_cluster $n_cpus >> $log_out 2>> $log_err"
-            );
-
+                );
+            if ($diamond == 1) {
+	    	$cmd_new_clusters = join(' ',
+	    	    "$script_new_cluster $dir_revision $fasta_file_prots",
+	    	    "$previous_fasta_unclustered",
+	    	    "$new_prots_to_cluster $n_cpus diamond >> $log_out 2>> $log_err"
+                    );
+            }
             say $cmd_new_clusters;
             $out = `$cmd_new_clusters`;
 
@@ -379,7 +413,20 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
             "-outfmt 6",
             "-evalue 0.001 >> $log_out 2>> $log_err"
         );
-
+	if ($diamond == 1) {
+	    $cmd_blast_unclustered = join(' ',
+                $path_diamond,
+                "blastp --query $fasta_file_prots",
+                "--db $blastable_unclustered",
+                "--out $out_blast_new_unclustered",
+                "--threads $n_cpus", 
+                "--outfmt 6",
+                "-b 2", #Uses at most approx. b * 6 GB of RAM. -b 2 will use at most ~12 GB of RAM.
+                "--more-sensitive",
+                "-k 500", #This is the default max sequences for blastp
+                "--evalue 0.001 >> $log_out 2>> $log_err"
+	    );
+	}
         say "\nStarted at ".(localtime);
         say "\nStep 1.3 : $cmd_blast_unclustered";
 

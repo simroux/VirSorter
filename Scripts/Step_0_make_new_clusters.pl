@@ -12,6 +12,8 @@ use Parallel::ForkManager;
 # Argument 1 : Fasta file of the predicted proteins
 # Argument 2 : Fasta file of the unclustered from previous Runs
 # Argument 3 : Liste of prots to try to cluster
+# Argument 4 : Number of CPUs to use
+# Argument 5 : (optional) specify "diamond" if this script should use diamond instead of blastp
 if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[4])))
 {
 	print "# Script to generate a new db with putative new clusters
@@ -19,11 +21,16 @@ if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV
 # Argument 1 : Fasta file of the predicted proteins
 # Argument 2 : Fasta file of the unclustered from previous Runs
 # Argument 3 : Liste of prots to try to cluster
-# Argument 4 : Number of CPUs to use\n";
+# Argument 4 : Number of CPUs to use
+# Argument 5 : specify \"diamond\" if this script should use diamond instead of blastp\n";
 	die "\n";
 }
-
+my $diamond = 0;
+if (defined($ARGV[5])) {
+    $diamond = 1;
+}
 my $path_to_blastp      = which("blastp")      or die "No blastp\n";
+my $path_to_diamond     = "";
 my $MCX_LOAD            = which("mcxload")     or die "No mcxload\n";
 my $MCL                 = which("mcl")         or die "No mcl\n";
 my $path_to_muscle      = which("muscle")      or die "No muscle\n";
@@ -31,6 +38,9 @@ my $path_to_hmmbuild    = which("hmmbuild")    or die "No hmmbuild\n";
 my $path_to_hmmpress    = which("hmmpress")    or die "No hmmpress\n";
 my $path_to_makeblastdb = which("makeblastdb") or die "No makeblastdb\n";
 
+if ($diamond == 1) {
+    $path_to_diamond    = which('diamond')     or die "Missing diamond\n";
+}
 my $n_cpus=$ARGV[4];
 my $r_dir=$ARGV[0];
 $r_dir=~/(r_\d*)\/?$/;
@@ -76,6 +86,9 @@ close S1;
 
 my $db= catfile($r_dir, "pool_new_proteins");
 my $cmd_format="$path_to_makeblastdb -dbtype prot -in $pool_new -out $db";
+if ($diamond == 1) {
+    $cmd_format="$path_to_diamond makedb --in $pool_new --db $db";
+}
 print "$cmd_format\n";
 my $out=`$cmd_format`;
 print "makeblastdb : $out\n";
@@ -85,7 +98,10 @@ $out=`$cmd_cat`;
 print "Cat : $cmd_cat\n";
 # BLAST des unclustered et des new contre les new
 my $out_blast=catfile($r_dir, "pool_unclustered-and-new-proteins-vs-new-proteins.tab");
-my $cmd_blast="$path_to_blastp -query $pool_new -db $db -out $out_blast -outfmt 6 -num_threads $n_cpus -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
+my $cmd_blast="$path_to_blastp -query $pool_new -db $db -out $out_blast -outfmt 6 -num_threads $n_cpus -evalue 0.00001";
+if ($diamond == 1) {
+    $cmd_blast="$path_to_diamond blastp --query $pool_new --db $db --out $out_blast --outfmt 6 -b 2 --threads $n_cpus -k 500 --evalue 0.00001 --more-sensitive";
+}
 print "$cmd_blast\n";
 $out=`$cmd_blast`;
 print "Blast : $out\n";
@@ -195,7 +211,12 @@ foreach(keys %unclustered){
 close S1;
 close S2;
 print "making a blastable db from the new unclustered\n";
-$out=`$path_to_makeblastdb -dbtype prot -in $pool_new_unclustered -out $blastable_new_unclustered`;
+my $unclustered_blast_db_cmd = "$path_to_makeblastdb -dbtype prot -in $pool_new_unclustered -out $blastable_new_unclustered";
+if ($diamond == 1) {
+    $unclustered_blast_db_cmd = "$path_to_diamond makedb --in $pool_new_unclustered --db $blastable_new_unclustered";
+}
+
+$out=`$unclustered_blast_db_cmd`;
 # on réduit aussi le fichier blast qu'on ajoute au blast des unclustered
 open(BL,"<$out_blast") || die "pblm ouverture fichier $out_blast\n";
 open(S1,">$blast_unclustered") || die "pblm ouverture fichier $blast_unclustered\n";
