@@ -42,7 +42,7 @@ my $th_nb_genes_covered=0.80;
 my $th_nb_genes_noncaudo=1;
 ## END OF ABSOLUTE THRESHOLDS ##
 my $script_dir= catfile($Bin);
-my $path_to_c_script= catfile($script_dir, "Sliding_windows_3");
+my $path_to_c_script= catfile($script_dir, "Sliding_windows_4");
 
 print "## Taking information from the contig info file ($csv_file)\n";
 open F1, '<', $csv_file;
@@ -170,7 +170,7 @@ my $i=0;
 
 my $num_contigs = scalar(@liste_contigs);
 my $chunk_len = int($num_contigs/$n_cpus)+1;
-print "$chunk_len\n";
+#print "$chunk_len\n";
 my @grouped = @liste_contigs;
 my $it = natatime $chunk_len, @grouped;
 
@@ -190,8 +190,11 @@ while (my @vals = $it->()){
 		my $out_file_c3=$ref_file;
 		$out_file_c3=~s/\.refs/.out_$$-sorted/g;
 	# 	print "we have $out_file_c $out_file_c2 $out_file_c3\n";
-		open MAP_C, '>', $out_file_c;
-		print MAP_C "$nb_genes{$contig_c}\n";
+		#open MAP_C, '>', $out_file_c;
+	# # # # # # # # NEW WAY OF GIVING RESULTS TO C FILE -- MODIFICATION START HERE
+	# 	open(MAP_C,">$out_file_c") || die "pblm opening file $out_file_c\n"; # We don't create a file anymore
+	#	print MAP_C "$nb_genes{$contig_c}\n";
+		my $line_input="$ref_file\n$nb_genes{$contig_c}\n"; # We start a "line" instead, so put everything in a string ($line_input)
 		my $last_strand="0";
 		my $total_hallmark=0;
 		my $total_noncaudo=0;
@@ -215,26 +218,47 @@ while (my @vals = $it->()){
 				print "Gene $contig_c / $gene -> category $infos{$contig_c}{$gene}{category} -> putative hallmark\n";
 			} # look at putative hallmarklmark
 			else{$tag.="0\t";}
-			print MAP_C "$tag\n";
+	# # # # # We remove the PART where we write to the file, and we put the same info in the string instead
+	#		print MAP_C "$tag\n";
+	# 	}
+	# 	close MAP_C;
+			$line_input.=$tag."\n";
 		}
-		close MAP_C;
-		### Now go execute the C program
-		my $c_cmd="$path_to_c_script $ref_file $out_file_c $out_file_c2";
-	#        print "Step 1 - $c_cmd\n";
-		my $out=`$c_cmd`;
+	# # # # # 
+		
+		
+	# # # # #  The call to the C script get replaced too
+	#	my $c_cmd="$path_to_c_script $ref_file $out_file_c $out_file_c2";
+	#       print "Step 1 - $c_cmd\n";
+	#	my $out=`$c_cmd`;
 	# 	print "$out\n";
-		$c_cmd="sort -r -n -k 4 $out_file_c2 > $out_file_c3";
-	#        print "Step 2 - $c_cmd\n";	
-		$out=`$c_cmd`;
+	#	$c_cmd="sort -r -n -k 4 $out_file_c2 > $out_file_c3";
+	#       print "Step 2 - $c_cmd\n";	
+	#	$out=`$c_cmd`;
 	# 	print "$out\n";
 		### reading the c program output to fill the match hash table / and removing overlap
+		## Now go execute the C program
+		my $path_to_c_script= catfile($script_dir, "Sliding_windows_4");
+		my $c_cmd="echo \"$line_input\" | $path_to_c_script | sort -r -n -k 4 ";
+		my $out=`$c_cmd`;
+		print "$out\n";
+	# # # # 	#### SWITCH FILE VS NOFILE
 		my %match;
 		my %check;
 		my @check_gene;
-		open OUT_C, '<', $out_file_c3;
-		while(<OUT_C>){
-			chomp($_);
-			my @tab=split("\t",$_);
+		
+		
+	# # # # #  We used to read the output from the C script, now we simply have the same information but in a string ($out)
+	#	open OUT_C, '<', $out_file_c3;
+	#	while(<OUT_C>){
+	#		chomp($_);
+	#		my @tab=split("\t",$_);
+		my @tab_lines=split("\n",$out);
+		foreach my $line (@tab_lines){
+			my @tab=split("\t",$line);
+	# # # # # 
+			
+			### Starting from there, it should be the same thing as the current version on your fork, there is only the "close OUT_C;" at the bottom of the loop to remove (l. 142 in this file)
 			my $start=$tab[0];
 			my $last=$tab[0]+$tab[1]-1;
 			my $fragment_id=$contig_c."-".$tab_genes[$start]."-".$tab_genes[$last];
@@ -292,7 +316,7 @@ while (my @vals = $it->()){
 				$match{$fragment_id}{"size"}=$tab[1];
 			}
 		}
-		close OUT_C;
+	#	close OUT_C;
 		### Ok, we read the C output, no we try (neatly) to merge all predictions for this sequence
 		my $n=0;
 		my %merged_match;
@@ -538,7 +562,7 @@ while (my @vals = $it->()){
 			close S1;
 		}
 	#	$i++;
-		`rm $out_file_c $out_file_c2 $out_file_c3`;
+		#`rm $out_file_c $out_file_c2 $out_file_c3`;
 	}
 	$pm->finish(0); # do the exit in the child process
 }

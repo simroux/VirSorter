@@ -97,11 +97,27 @@ long double log10perso(long double x){
 }
 
 
-int main(int argc, char *argv[])
+int main(int argc, char **argv)
 {
 // 	printf( "I am alive!  Beware.\n" );
 	FILE *ifp, *reffile;
-	char* refFilename=argv[1];char* inputFilename=argv[2];char* outputFilename=argv[3];
+// 	char* refFilename=argv[1];
+	char* inputFilename=argv[2];char* outputFilename=argv[3];
+	
+	char *refFilename;
+	char *buffer = NULL;
+	int read;
+	unsigned long len;
+	read = getline(&refFilename, &len, stdin);
+	if (-1 != read){
+// 		puts(refFilename);
+	} else {
+		printf("No line read...\n");
+		exit(1);
+	}
+	refFilename[strcspn(refFilename, "\n")] = 0;
+// 	fprintf(stderr, "All good for file --%s--\n",refFilename);
+// 	refFilename="/global/dna/projectdirs/MEP/tools/VirSorter/Generic_ref_file.refs";
 	reffile=fopen(refFilename,"r");
 	int nb_genes=0,phage=0,pfam=0,unch=0,size=0,strand=0,hallmark=0,i=0,noncaudo=0;
 	float f_size=0.0;
@@ -111,19 +127,23 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	while (fscanf(reffile,"%Lf %Lf %Lf %Lf %f %Lf", &p_phage, &p_pfam, &p_unch, &p_strand, &f_size, &p_noncaudo) == 6) {}
-	printf("refs => %LE %LE %LE %LE %f %LE\n", p_phage, p_pfam, p_unch, p_strand, f_size, p_noncaudo);
+// 	printf("refs => %LE %LE %LE %LE %f %LE\n", p_phage, p_pfam, p_unch, p_strand, f_size, p_noncaudo);
 	fclose(reffile);
-	ifp = fopen(inputFilename, "r");
-	if (ifp == NULL) {
-		fprintf(stderr, "Can't open input file %s!\n",inputFilename);
-		exit(1);
-	}
-	if (fscanf(ifp, "%d", &nb_genes) == 1){
+// 	ifp = fopen(inputFilename, "r");
+// 	if (ifp == NULL) {
+// 		fprintf(stderr, "Can't open input file %s!\n",inputFilename);
+// 		exit(1);
+// 	}
+// 	if (fscanf(ifp, "%d", &nb_genes) == 1){
+// 		printf("%d genes\n",nb_genes);
+// 	}
+	if (fscanf(stdin, "%d", &nb_genes) == 1){
 // 		printf("%d genes\n",nb_genes);
 	}
 	// Alloc memory for gene tables
 	int t_phage[nb_genes],t_pfam[nb_genes],t_unch[nb_genes], t_size[nb_genes],t_strand[nb_genes],t_hallmark[nb_genes],t_noncaudo[nb_genes];
-	while (fscanf(ifp,"%d %d %d %d %d %d %d", &phage, &noncaudo, &pfam, &unch, &size, &strand, &hallmark) == 7) {
+// 	while (fscanf(ifp,"%d %d %d %d %d %d %d", &phage, &noncaudo, &pfam, &unch, &size, &strand, &hallmark) == 7) {
+	while (fscanf(stdin,"%d %d %d %d %d %d %d", &phage, &noncaudo, &pfam, &unch, &size, &strand, &hallmark) == 7) {
 // 		printf("gene %d => %d %d %d %d %d %d %d\n", i, phage, noncaudo, pfam, unch, size, strand, hallmark);
 		t_phage[i]=phage;
 		t_noncaudo[i]=noncaudo;
@@ -134,7 +154,11 @@ int main(int argc, char *argv[])
 		t_hallmark[i]=hallmark;
 		i++;
 	}
-	fclose(ifp);
+// 	printf("Remaining lines\n");
+	while (getline(&buffer, &len, stdin)!= -1){
+		puts(buffer);
+	}
+// 	fclose(ifp);
 	if (nb_genes!=i){
 		printf("Houston we got a problem !!!!!! : we had %d genes and we count %d lines\n",nb_genes,i);
 		exit(1);
@@ -167,7 +191,7 @@ int main(int argc, char *argv[])
 // 	printf("Memory Allocated and Initialized for %d %d 5\n",nb_genes,max);
 	int store_h[nb_genes][max];
 	int n_phage=0,n_pfam=0,n_short=0,n_switch=0,n_unch=0,n_hallmark=0,n_noncaudo=0;
-	printf("For this contig we'll have %d sliding windows (= nb of comparison)\n",pred_nb_s_w);
+// 	printf("For this contig we'll have %d sliding windows (= nb of comparison)\n",pred_nb_s_w);
 	for (k=max;k>=min;k--){
 		int th_phage=k,th_pfam=k,th_size=k,th_unch=k,th_strand=k,th_noncaudo=k;
 		// we get all thresholds
@@ -232,11 +256,11 @@ int main(int argc, char *argv[])
 	}
 	// We look for local maxima and export the results
 	FILE *ofp;
-	ofp = fopen(outputFilename, "w");
-	if (ofp == NULL) {
-		fprintf(stderr, "Can't open output file %s!\n",outputFilename);
-		exit(1);
-	}
+// 	ofp = fopen(outputFilename, "w");
+// 	if (ofp == NULL) {
+// 		printf(stderr, "Can't open output file %s!\n",outputFilename);
+// 		exit(1);
+// 	}
 	for (k=max;k>=min;k--){
 		for (i=0;i<(nb_genes-k+1);i++){
 			for (j=0;j<6;j++){
@@ -246,14 +270,15 @@ int main(int argc, char *argv[])
 						// so we print it, with the nb_hallmark (start / window size / type / sig / nb_hallmark)
 // 						printf("local maximum ! %d %d %d %E %d\n",i,k,j,store[i][k][j],store_h[i][k]);
 						// i - start gene / k - sliding window size / j - proof typ (0 - phage / 1 - pfam / 2 - unch / 3 - size / 4 - strand)
-						fprintf(ofp, "%d\t%d\t%d\t%.14lf\t%d\n",i,k,j,store[i][k][j],store_h[i][k]);
+// 						fprintf(ofp, "%d\t%d\t%d\t%.14lf\t%d\n",i,k,j,store[i][k][j],store_h[i][k]);
+						printf("%d\t%d\t%d\t%.14lf\t%d\n",i,k,j,store[i][k][j],store_h[i][k]);
 					}
 				}
 			}
 		}
 	}
-	fclose(ofp);
-	printf("done");
+// 	fclose(ofp);
+// 	printf("done");
 	// We export the results
 	return 0;
 }
