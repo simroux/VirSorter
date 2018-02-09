@@ -239,7 +239,7 @@ while (my @vals = $it->()){
 		### reading the c program output to fill the match hash table / and removing overlap
 		## Now go execute the C program
 		my $path_to_c_script= catfile($script_dir, "Sliding_windows_3");
-		my $c_cmd="echo \"$line_input\" | $path_to_c_script | sort -r -n -k 4 ";
+		my $c_cmd="printf \"$line_input\" | $path_to_c_script | sort -r -n -k 4 ";
 		my $out=`$c_cmd`;
 		print "$out\n";
 	# # # # 	#### SWITCH FILE VS NOFILE
