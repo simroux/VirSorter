@@ -23,6 +23,12 @@ Options:
                  Diamond is much faster than blastp and may be useful for adding 
 		 many custom phages, or for processing extremely large Fasta files. 
 		 Unless you specify --diamond, VirSorter will use blastp.
+  --keep-db      Specifying this flag keeps the new HMM and BLAST databases created 
+                 after adding custom phages. This is useful if you have custom phages
+		 that you want to be included in several different analyses and want 
+		 to save the database and point VirSorter to it in subsequent runs.
+                 By default, this is off, and you should only specify this flag if 
+		 you're SURE you need it.
   --help         Show help and exit
 
 =head1 DESCRIPTION
@@ -54,6 +60,7 @@ my $n_cpus          = 4;
 my $wdir            = catdir(cwd(), 'virsorter-out');
 my $diamond         = 0;
 my $blastp          = 'blastp';
+my $keepdb          = 0;
 
 GetOptions(
    'f|fna=s'     => \$input_file,
@@ -65,6 +72,7 @@ GetOptions(
    'data-dir:s'  => \$data_dir,
    'ncpu:i'      => \$n_cpus,
    'diamond'     => \$diamond,
+   'keep-db'     => \$keepdb,
    'h|help'      => \$help,
 );
 
@@ -507,9 +515,11 @@ say "Cleaning the output directory";
 # We rm the first db to not overload user disk space
 my $db_revision_0 = catdir($wdir, 'r_0', 'db');
 #Comment out the next 4 lines to keep the database after processing!
-if (-d $db_revision_0) {
-    $out = `rm -r $db_revision_0`;
-    say "rm -r $db_revision_0 : $out";
+if ($keepdb == 0) {
+    if (-d $db_revision_0) {
+        $out = `rm -r $db_revision_0`;
+        say "rm -r $db_revision_0 : $out";
+    }
 }
 #Comment out the above 4 lines to keep the database after processing!
 
