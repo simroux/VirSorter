@@ -7,19 +7,32 @@ use Bio::Seq;
 use File::Spec::Functions;
 use File::Path 'mkpath';
 use File::Which 'which';
-# Script to generate a new db with putative new clusters
-# Argument 0 : Fasta file of the new phages
+use Parallel::ForkManager;
 
-if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[2])))
+# Script to generate a new db with putative new clusters
+# Argument 0 : fasta of custom phages
+# Argument 1 : db-in directory
+# Argument 2 : db-out directory
+# Argument 3 : number of CPUs to use
+# Argument 4 : (optional) specify "diamond" if this script should use diamond instead of blastp
+
+if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[3])))
 {
 	print "# Script to generate a new db with putative new clusters
 # Argument 0 : fasta of custom phages
 # Argument 1 : db-in directory
 # Argument 2 : db-out directory
-\n";
+# Argument 3 : number of CPUs to use
+# Argument 4 : (optional) specify \"diamond\" if this script should use diamond instead of blastp\n";
 	die "\n";
 }
+my $diamond = 0;
+if (defined($ARGV[4])) {
+    $diamond = 1;
+    print "Diamond was used here instead of blastp.\n";
+}
 
+my $path_to_diamond     = "";
 my $path_to_makeblastdb = which("makeblastdb")    or die "No makeblastdb\n";
 my $path_to_blastp      = which("blastp")         or die "No blastp\n";
 my $path_to_muscle      = which("muscle")         or die "No muscle\n";
@@ -30,12 +43,17 @@ my $path_to_mga         = which("mga_linux_ia64") or die "No mga\n";
 my $MCX_LOAD            = which("mcxload")        or die "No mcxload\n";
 my $MCL                 = which("mcl")            or die "No mcl\n";
 
+if ($diamond == 1) {
+    $path_to_diamond    = which('diamond')     or die "Missing diamond\n";
+}
 my $min_seq_in_a_cluster=3;
-my $n_cpus=8;
+
 
 my $fasta_contigs=$ARGV[0];
 my $db_in=$ARGV[1];
 my $db_out=$ARGV[2];
+my $n_cpus=$ARGV[3];
+#my $n_cpus=8;
 
 my $tmp_dir=$db_out."/initial_db";
 `mkdir $tmp_dir`;
@@ -210,16 +228,22 @@ close NEWPROT;
 # - 3 - and make new clusters
 my $db=$tmp_dir."Custom_phages_mga_prots-to-cluster";
 my $cmd_format="$path_to_makeblastdb -in $prot_file_to_cluster -out $db -dbtype prot";
+if ($diamond == 1) {
+    $cmd_format="$path_to_diamond makedb --in $prot_file_to_cluster --db $db";
+}
 print "$cmd_format\n";
 my $out=`$cmd_format`;
-print "Formatdb : $out\n";
+print "Making BLAST database : $out\n";
 my $cmd_cat="cat $fasta_unclustered >> $prot_file_to_cluster";
 print "$cmd_cat\n";
 $out=`$cmd_cat`;
 print "Cat : $cmd_cat\n";
 #     - blast vs themselves and the unclustered
 my $out_blast=$tmp_dir."pool_unclustered-and-custom-phages-vs-custom-phages.tab";
-my $cmd_blast="$path_to_blastp -query $prot_file_to_cluster -db $db -out $out_blast -outfmt 6 -num_threads 10 -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
+my $cmd_blast="$path_to_blastp -query $prot_file_to_cluster -db $db -out $out_blast -outfmt 6 -num_threads $n_cpus -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
+if ($diamond == 1) {
+    $cmd_blast="$path_to_diamond blastp --query $prot_file_to_cluster --db $db --out $out_blast --outfmt 6 --threads $n_cpus -k 500 -b 2 --evalue 0.00001 --more-sensitive";
+}
 print "$cmd_blast\n";
 $out=`$cmd_blast`;
 print "Blast : $out\n";
@@ -254,7 +278,7 @@ print "$cmd_mcxload\n";
 $out=`$cmd_mcxload`;
 print "Mxc Load : $out\n";
 my $dump_file=$tmp_dir."new_clusters.csv";
-my $cmd_mcl="$MCL $out_mci -I 2  -use-tab $out_tab -o $dump_file";
+my $cmd_mcl="$MCL $out_mci -I 2 -te $n_cpus -use-tab $out_tab -o $dump_file";
 print "$cmd_mcl\n";
 $out=`$cmd_mcl`;
 print "Mcl : $out\n";
@@ -321,8 +345,12 @@ foreach(keys %unclustered){
 }
 close S1;
 print "making a blastable db from the new unclustered\n";
-$out=`$path_to_makeblastdb -in $final_pool_unclustered -out $final_blastable_unclustered -dbtype prot`;
+my $unclustered_blast_db_cmd = "$path_to_makeblastdb -in $final_pool_unclustered -out $final_blastable_unclustered -dbtype prot";
 # We subset the BLAST result to only unclustered proteins, and add it to the previous unclustered blast result
+if ($diamond == 1) {
+    $unclustered_blast_db_cmd = "$path_to_diamond makedb --in $final_pool_unclustered --db $final_blastable_unclustered"
+}
+$out=`$unclustered_blast_db_cmd`;
 open(BL,"<$out_blast") || die "pblm ouverture fichier $out_blast\n";
 open(S1,">$final_blast_unclustered") || die "pblm ouverture fichier $final_blast_unclustered\n";
 while(<BL>){
@@ -336,8 +364,12 @@ close BL;
 close S1;
 # Generating the new database
 my $tag=0;
+
+my $pm = new Parallel::ForkManager($n_cpus); #Starts the parent process for parallelizing the next foreach loop, sets max number of parallel processes
+$pm->set_waitpid_blocking_sleep(0);
 foreach(sort keys %clusters){
-	$tag=1;
+	$pm->start and next; #do the fork
+#	$tag=1;
 	my $ali_id=$_;
 	my $path_to_file=$tmp_dir."clusts/".$ali_id;
 	my $path_to_fasta=$tmp_dir."clusts/".$ali_id.".faa";
@@ -346,27 +378,30 @@ foreach(sort keys %clusters){
 	if (-e $path_to_ali){
 		`rm $path_to_ali $path_to_hmm`;
 	}
-	my $muscle_out=$tmp_dir."log_out_muscle";
-	my $muscle_err=$tmp_dir."log_err_muscle";
+	my $muscle_out=$tmp_dir."log_out_muscle_$$";
+	my $muscle_err=$tmp_dir."log_err_muscle_$$";
 	`$path_to_muscle -in $path_to_fasta -out $path_to_ali > $muscle_out 2> $muscle_err`;
-	my $out_stokcholm=$path_to_ali.".stockholm";
-	open(S1,">$out_stokcholm") || die "pblm opening $out_stokcholm\n";
-	print S1 "# STOCKHOLM 1.0\n";
-	open(FA,"<$path_to_ali") || die "pblm ouverture $path_to_ali\n";
-	while(<FA>){
-		chomp($_);
-		if ($_=~/^>(.*)/){
-			my $id=$1;
-			$id=~s/\s/_/g;
-			print S1 "\n$id  ";
-			
-		}
-		else{print S1 "$_";}
-	}
-	close FA;
-	print S1 "\n//\n";
-	`$path_to_hmmbuild --amino $path_to_hmm $out_stokcholm`;
+#	my $out_stokcholm=$path_to_ali.".stockholm";
+#	open(S1,">$out_stokcholm") || die "pblm opening $out_stokcholm\n";
+#	print S1 "# STOCKHOLM 1.0\n";
+#	open(FA,"<$path_to_ali") || die "pblm ouverture $path_to_ali\n";
+#	while(<FA>){
+#		chomp($_);
+#		if ($_=~/^>(.*)/){
+#			my $id=$1;
+#			$id=~s/\s/_/g;
+#			print S1 "\n$id  ";
+#			
+#		}
+#		else{print S1 "$_";}
+#	}
+#	close FA;
+#	print S1 "\n//\n";
+	`$path_to_hmmbuild --amino --cpu 1 --informat afa $path_to_hmm $path_to_ali`;
+	`rm $muscle_out $muscle_err`;
+	$pm->finish; # do the exit in the child process
 }
+#$pm->wait_all_children; # wait until everything in the above foreach loop is done before moving on
 # We pool all hmm / fasta from all PCs
 $out=`cat $db_phage > $db_out/Pool_clusters.hmm`;
 print "cat previous hmm : $out\n";
@@ -382,6 +417,7 @@ print "Cat old catalog : $out\n";
 open(CA,">>$final_catalog") || die ("pblm opening file $final_catalog\n");
 foreach(keys %clusters){
 	my $liste=join(" ",keys %{$clusters{$_}});
+	$liste =~ s/\|/_/g; #Added to keep same format of clusters file when adding new ones
 	print CA "$_|2||$liste\n";
 }
 close CA;

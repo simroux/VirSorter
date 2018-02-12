@@ -5,23 +5,32 @@ use autodie;
 use File::Spec::Functions;
 use File::Path 'mkpath';
 use File::Which 'which';
+use Parallel::ForkManager;
 
 # Script to generate a new db with putative new clusters
 # Argument 0 : revision directory
 # Argument 1 : Fasta file of the predicted proteins
 # Argument 2 : Fasta file of the unclustered from previous Runs
 # Argument 3 : Liste of prots to try to cluster
-if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[3])))
+# Argument 4 : Number of CPUs to use
+# Argument 5 : (optional) specify "diamond" if this script should use diamond instead of blastp
+if (($ARGV[0] eq "-h") || ($ARGV[0] eq "--h") || ($ARGV[0] eq "-help" )|| ($ARGV[0] eq "--help") || (!defined($ARGV[4])))
 {
 	print "# Script to generate a new db with putative new clusters
 # Argument 0 : revision directory
 # Argument 1 : Fasta file of the predicted proteins
 # Argument 2 : Fasta file of the unclustered from previous Runs
-# Argument 3 : Liste of prots to try to cluster\n";
+# Argument 3 : Liste of prots to try to cluster
+# Argument 4 : Number of CPUs to use
+# Argument 5 : specify \"diamond\" if this script should use diamond instead of blastp\n";
 	die "\n";
 }
-
+my $diamond = 0;
+if (defined($ARGV[5])) {
+    $diamond = 1;
+}
 my $path_to_blastp      = which("blastp")      or die "No blastp\n";
+my $path_to_diamond     = "";
 my $MCX_LOAD            = which("mcxload")     or die "No mcxload\n";
 my $MCL                 = which("mcl")         or die "No mcl\n";
 my $path_to_muscle      = which("muscle")      or die "No muscle\n";
@@ -29,6 +38,10 @@ my $path_to_hmmbuild    = which("hmmbuild")    or die "No hmmbuild\n";
 my $path_to_hmmpress    = which("hmmpress")    or die "No hmmpress\n";
 my $path_to_makeblastdb = which("makeblastdb") or die "No makeblastdb\n";
 
+if ($diamond == 1) {
+    $path_to_diamond    = which('diamond')     or die "Missing diamond\n";
+}
+my $n_cpus=$ARGV[4];
 my $r_dir=$ARGV[0];
 $r_dir=~/(r_\d*)\/?$/;
 my $r_number=$1;
@@ -73,6 +86,9 @@ close S1;
 
 my $db= catfile($r_dir, "pool_new_proteins");
 my $cmd_format="$path_to_makeblastdb -dbtype prot -in $pool_new -out $db";
+if ($diamond == 1) {
+    $cmd_format="$path_to_diamond makedb --in $pool_new --db $db";
+}
 print "$cmd_format\n";
 my $out=`$cmd_format`;
 print "makeblastdb : $out\n";
@@ -82,7 +98,10 @@ $out=`$cmd_cat`;
 print "Cat : $cmd_cat\n";
 # BLAST des unclustered et des new contre les new
 my $out_blast=catfile($r_dir, "pool_unclustered-and-new-proteins-vs-new-proteins.tab");
-my $cmd_blast="$path_to_blastp -query $pool_new -db $db -out $out_blast -outfmt 6 -num_threads 10 -evalue 0.00001"; # On 10 cores to keep a few alive for the rest of the scripts
+my $cmd_blast="$path_to_blastp -query $pool_new -db $db -out $out_blast -outfmt 6 -num_threads $n_cpus -evalue 0.00001";
+if ($diamond == 1) {
+    $cmd_blast="$path_to_diamond blastp --query $pool_new --db $db --out $out_blast --outfmt 6 -b 2 --threads $n_cpus -k 500 --evalue 0.00001 --more-sensitive";
+}
 print "$cmd_blast\n";
 $out=`$cmd_blast`;
 print "Blast : $out\n";
@@ -116,7 +135,7 @@ print "$cmd_mcxload\n";
 $out=`$cmd_mcxload`;
 print "Mxc Load : $out\n";
 my $dump_file=catfile($r_dir, "new_clusters.csv");
-my $cmd_mcl="$MCL $out_mci -I 2  -use-tab $out_tab -o $dump_file";
+my $cmd_mcl="$MCL $out_mci -I 2 -te $n_cpus -use-tab $out_tab -o $dump_file";
 print "$cmd_mcl\n";
 $out=`$cmd_mcl`;
 print "Mcl : $out\n";
@@ -192,7 +211,12 @@ foreach(keys %unclustered){
 close S1;
 close S2;
 print "making a blastable db from the new unclustered\n";
-$out=`$path_to_makeblastdb -dbtype prot -in $pool_new_unclustered -out $blastable_new_unclustered`;
+my $unclustered_blast_db_cmd = "$path_to_makeblastdb -dbtype prot -in $pool_new_unclustered -out $blastable_new_unclustered";
+if ($diamond == 1) {
+    $unclustered_blast_db_cmd = "$path_to_diamond makedb --in $pool_new_unclustered --db $blastable_new_unclustered";
+}
+
+$out=`$unclustered_blast_db_cmd`;
 # on réduit aussi le fichier blast qu'on ajoute au blast des unclustered
 open(BL,"<$out_blast") || die "pblm ouverture fichier $out_blast\n";
 open(S1,">$blast_unclustered") || die "pblm ouverture fichier $blast_unclustered\n";
@@ -206,9 +230,13 @@ while(<BL>){
 close BL;
 close S1;
 
-my $tag=0;
+#my $tag=0;
+
+my $pm = new Parallel::ForkManager($n_cpus); #Starts the parent process for parallelizing the next foreach loop, sets max number of parallel processes
+$pm->set_waitpid_blocking_sleep(0);
 foreach(sort keys %clusters){
-	$tag=1;
+	$pm->start and next; #do the fork
+#	$tag=1;
 	my $ali_id=$_;
 	my $path_to_file= catfile($r_dir, "clusts", $ali_id);
 	my $path_to_fasta=catfile($r_dir, "clusts", $ali_id . ".faa");
@@ -217,27 +245,31 @@ foreach(sort keys %clusters){
 	if (-e $path_to_ali){
 		`rm $path_to_ali $path_to_hmm`;
 	}
-	my $muscle_out= catfile($r_dir, "log_out_muscle");
-	my $muscle_err= catfile($r_dir, "log_err_muscle");
+	my $muscle_out= catfile($r_dir, "log_out_muscle_$$");
+	my $muscle_err= catfile($r_dir, "log_err_muscle_$$");
 	`$path_to_muscle -in $path_to_fasta -out $path_to_ali > $muscle_out 2> $muscle_err`;
-	my $out_stokcholm=$path_to_ali.".stockholm";
-	open(S1,">$out_stokcholm") || die "pblm opening $out_stokcholm\n";
-	print S1 "# STOCKHOLM 1.0\n";
-	open(FA,"<$path_to_ali") || die "pblm ouverture $path_to_ali\n";
-	while(<FA>){
-		chomp($_);
-		if ($_=~/^>(.*)/){
-			my $id=$1;
-			$id=~s/\s/_/g;
-			print S1 "\n$id  ";
-			
-		}
-		else{print S1 "$_";}
-	}
-	close FA;
-	print S1 "\n//\n";
-	`$path_to_hmmbuild --amino $path_to_hmm $out_stokcholm`;
+#	my $out_stokcholm=$path_to_ali.".stockholm";
+#	open(S1,">$out_stokcholm") || die "pblm opening $out_stokcholm\n";
+#	print S1 "# STOCKHOLM 1.0\n";
+#	open(FA,"<$path_to_ali") || die "pblm ouverture $path_to_ali\n";
+#	while(<FA>){
+#		chomp($_);
+#		if ($_=~/^>(.*)/){
+#			my $id=$1;
+#			$id=~s/\s/_/g;
+#			print S1 "\n$id  ";
+#			
+#		}
+#		else{print S1 "$_";}
+#	}
+#	close FA;
+#	print S1 "\n//\n";
+#HMMER can take aligned fasta as input, no need to convert. Commmenting out previous 16 lines.
+	`$path_to_hmmbuild --amino --cpu 1 --informat afa $path_to_hmm $path_to_ali`;
+	`rm $muscle_out $muscle_err`;
+	$pm->finish(0); # do the exit in the child process
 }
+#$pm->wait_all_children; # wait until everything in the above foreach loop is done before moving on
 
 my @tab_hmm=<$r_dir/clusts/*.hmm>;
 if ($#tab_hmm>=0){

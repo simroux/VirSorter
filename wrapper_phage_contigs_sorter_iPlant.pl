@@ -14,9 +14,21 @@ Options:
   --cp           Custom phage sequence 
   --db           Either "1" (DEFAULT Refseqdb) or "2" (Viromedb)
   --wdir         Working directory (DEFAULT cwd)
-  --ncpu         Number of CPUs
-  --virome       Virome decontamination mode, for datasets mostly viral, force the use of generic metrics instead of calculated from the whole dataset. Set to 1 to use virome decontamination mode (default: 0)
-
+  --ncpu         Number of CPUs (default: 4)
+  --virome       Add this flag to enable virome decontamination mode, for datasets
+                 mostly viral to force the use of generic metrics instead of 
+                 calculated from the whole dataset. (default: off)
+  --data-dir     Path to "virsorter-data" directory (e.g. /path/to/virsorter-data)
+  --diamond      Use diamond (in "--more-sensitive" mode) instead of blastp. 
+                 Diamond is much faster than blastp and may be useful for adding 
+		 many custom phages, or for processing extremely large Fasta files. 
+		 Unless you specify --diamond, VirSorter will use blastp.
+  --keep-db      Specifying this flag keeps the new HMM and BLAST databases created 
+                 after adding custom phages. This is useful if you have custom phages
+		 that you want to be included in several different analyses and want 
+		 to save the database and point VirSorter to it in subsequent runs.
+                 By default, this is off, and you should only specify this flag if 
+		 you're SURE you need it.
   --help         Show help and exit
 
 =head1 DESCRIPTION
@@ -44,18 +56,23 @@ my $choice_database = 1;
 my $tag_virome      = 0;
 my $custom_phage    = '';
 my $data_dir        = '/data';
-my $n_cpus          = 16;
+my $n_cpus          = 4;
 my $wdir            = catdir(cwd(), 'virsorter-out');
+my $diamond         = 0;
+my $blastp          = 'blastp';
+my $keepdb          = 0;
 
 GetOptions(
    'f|fna=s'     => \$input_file,
    'd|dataset:s' => \$code_dataset,
    'db:i'        => \$choice_database,
-   'virome:i'    => \$tag_virome,
+   'virome'      => \$tag_virome,
    'wdir:s'      => \$wdir,
    'cp:s'        => \$custom_phage,
    'data-dir:s'  => \$data_dir,
    'ncpu:i'      => \$n_cpus,
+   'diamond'     => \$diamond,
+   'keep-db'     => \$keepdb,
    'h|help'      => \$help,
 );
 
@@ -71,6 +88,10 @@ if ($choice_database < 1 || $choice_database > 3) {
     pod2usage('choice_database must be 1, 2, or 3');
 }
 
+if ($diamond == 1) {
+    $blastp = 'diamond'
+}
+
 say map { sprintf "%-15s: %s\n", @$_ } (
     ['Bin',           $Bin],
     ['Dataset',       $code_dataset],
@@ -79,23 +100,32 @@ say map { sprintf "%-15s: %s\n", @$_ } (
     ['Working dir',   $wdir],
     ['Custom phages', $custom_phage],
     ['Data dir',      $data_dir],
+    ['Num CPUs',      $n_cpus],
+    ['blastp',        $blastp],
 );
 
+if ($diamond == 1) {
+    say "This VirSorter run uses DIAMOND (Buchfink et al., Nature Methods 2015) instead of blastp.\n";
+}
 if ($tag_virome == 1) {
     say "WARNING: THIS WILL BE A VIROME DECONTAMINATION RUN";
 }
 
 # Need 2 databases
 # PCs from Refseq (phages) or PCs from Refseq+Viromes
-# PFAM (26.0)
+# PFAM (27.0)
 
 my $path_hmmsearch     = which('hmmsearch') or die "Missing hmmsearch\n";
 my $path_blastp        = which('blastp')    or die "Missing blastp\n";
+my $path_diamond       = '';
 my $script_dir         = catdir($Bin, 'Scripts');
 my $dir_Phage_genes    = catdir($data_dir,'Phage_gene_catalog');
 my $readme_file        = catfile($data_dir, 'VirSorter_Readme.txt');
 my $ref_phage_clusters = catfile($data_dir,
                          'Phage_gene_catalog', 'Phage_Clusters_current.tab');
+if ($diamond == 1) {
+    $path_diamond      = which('diamond')   or die "Missing diamond\n";
+}
 
 if ($tag_virome == 1) {
     $readme_file = catfile($data_dir, 'VirSorter_Readme_viromes.txt');
@@ -166,6 +196,7 @@ if ( !-d $fastadir ) {
     my $cmd_step_1 
         = "$path_script_step_1 $code_dataset $fastadir $fna_file $nb_gene_th "
         . ">> $log_out 2>> $log_err";
+    say "Started at ".(localtime);
     say "Step 0.5 : $cmd_step_1";
     `echo $cmd_step_1 >> $log_out 2>> $log_err`;
     $out = `$cmd_step_1`;
@@ -186,6 +217,7 @@ my $cmd_hmm_pfama
     . "-o $out_hmmsearch_pfama_bis --noali $db_PFAM_a $fasta_file_prots "
     . ">> $log_out 2>> $log_err";
 
+say "Started at ".(localtime);
 say "Step 0.8 : $cmd_hmm_pfama";
 
 `echo $cmd_hmm_pfama >> $log_out 2>> $log_err`;
@@ -201,6 +233,7 @@ my $cmd_hmm_pfamb
     = "$path_hmmsearch --tblout $out_hmmsearch_pfamb --cpu $n_cpus "
     . "-o $out_hmmsearch_pfamb_bis --noali $db_PFAM_b $fasta_file_prots "
     . ">> $log_out 2>> $log_err";
+say "Started at ".(localtime);
 say "Step 0.9 : $cmd_hmm_pfamb";
 `echo $cmd_hmm_pfamb >> $log_out 2>> $log_err`;
 
@@ -237,12 +270,12 @@ my $cmd_merge
 
 my $script_detect = catfile($script_dir, "Step_3_highlight_phage_signal.pl");
 my $cmd_detect 
-    = "$script_detect $out_file_affi $out_file_phage_fragments "
+    = "$script_detect $out_file_affi $out_file_phage_fragments $n_cpus "
     . ">> $log_out 2>> $log_err";
 
 if ($tag_virome == 1) {
     $cmd_detect 
-        = "$script_detect $out_file_affi $out_file_phage_fragments "
+        = "$script_detect $out_file_affi $out_file_phage_fragments $n_cpus "
         . "$generic_ref_file >> $log_out 2>> $log_err";
 }
 
@@ -261,7 +294,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
     $r_n++;    # New revision of the prediction
     my $dir_revision = catdir($wdir, 'r_' . $r_n);
     say "### Revision $r_n";
-
+    say "Started at ".(localtime);
     if (!-d $dir_revision) {
         ## mkdir for this revision
         mkpath($dir_revision);
@@ -281,9 +314,19 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
                 my $script_custom_phage = catfile(
                     $script_dir, "Step_first_add_custom_phage_sequence.pl"
                 );
-                $out = `$script_custom_phage $custom_phage $dir_Phage_genes/ $dir_revision/db >> $log_out 2>> $log_err`;
-
-                say "Adding custom phage to the database : $out";
+                my $add_first = join(' ',
+                    "$script_custom_phage $custom_phage $dir_Phage_genes/",
+                    "$dir_revision/db $n_cpus >> $log_out 2>> $log_err"
+                );
+                if ($diamond == 1) {
+                    $add_first = join(' ',
+		            "$script_custom_phage $custom_phage $dir_Phage_genes/",
+			        "$dir_revision/db $n_cpus diamond >> $log_out 2>> $log_err"
+                    );
+		        }
+				    
+                say "Adding custom phage to the database : \n$add_first\n";
+                $out = `$add_first`;
             }
             # should replace Pool_cluster / Pool_unclustered and
             # Pool_new_unclustered else , we just import the Refseq database
@@ -299,13 +342,19 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
             my $cmd_new_clusters = join(' ',
                 "$script_new_cluster $dir_revision $fasta_file_prots",
                 "$previous_fasta_unclustered",
-                "$new_prots_to_cluster >> $log_out 2>> $log_err"
-            );
-
+                "$new_prots_to_cluster $n_cpus >> $log_out 2>> $log_err"
+                );
+            if ($diamond == 1) {
+	    	$cmd_new_clusters = join(' ',
+	    	    "$script_new_cluster $dir_revision $fasta_file_prots",
+	    	    "$previous_fasta_unclustered",
+	    	    "$new_prots_to_cluster $n_cpus diamond >> $log_out 2>> $log_err"
+                    );
+            }
             say $cmd_new_clusters;
             $out = `$cmd_new_clusters`;
 
-            say "Step 1.1 new clusters and new database : $out";
+            say "\nStep 1.1 new clusters and new database : $out";
             # Rm the list of prots to be clustered now that they should be
             # clustered
             $out = `rm $new_prots_to_cluster`;
@@ -345,6 +394,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
                 "$fasta_file_prots >> $log_out 2>> $log_err"
             );
 
+            say "\nStarted at ".(localtime);
             say "Step 1.2 : $cmd_hmm_cluster";
 
             `echo $cmd_hmm_cluster >> $log_out 2>> $log_err`;
@@ -371,7 +421,21 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
             "-outfmt 6",
             "-evalue 0.001 >> $log_out 2>> $log_err"
         );
-
+	if ($diamond == 1) {
+	    $cmd_blast_unclustered = join(' ',
+                $path_diamond,
+                "blastp --query $fasta_file_prots",
+                "--db $blastable_unclustered",
+                "--out $out_blast_new_unclustered",
+                "--threads $n_cpus", 
+                "--outfmt 6",
+                "-b 2", #Uses at most approx. b * 6 GB of RAM. -b 2 will use at most ~12 GB of RAM.
+                "--more-sensitive",
+                "-k 500", #This is the default max sequences for blastp
+                "--evalue 0.001 >> $log_out 2>> $log_err"
+	    );
+	}
+        say "\nStarted at ".(localtime);
         say "\nStep 1.3 : $cmd_blast_unclustered";
 
         `echo $cmd_blast_unclustered >> $log_out 2>> $log_err`;
@@ -404,6 +468,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
     }
 
     ## Complete the affi
+    say "Started at ".(localtime);
     say "Step 2 : $cmd_merge";
     `echo $cmd_merge >> $log_out 2>> $log_err`;
     $out = `$cmd_merge`; 
@@ -412,6 +477,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
 
     say "\t$out";
     ## Complete the summary
+    say "Started at ".(localtime);
     say "Step 3 : $cmd_detect";
     `echo $cmd_detect >> $log_out 2>> $log_err`;
     $out = `$cmd_detect`;
@@ -421,6 +487,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
     # which of both of these categories are phage enough to be added to the
     # databases
     say "Setting up the final result file";
+    say "Started at ".(localtime);
     say "Step 4 : $cmd_summary";
     `echo $cmd_summary >> $log_out 2>> $log_err`;
     $out = `$cmd_summary`;
@@ -434,6 +501,7 @@ my $script_generate_output
 my $cmd_step_5 
     = "$script_generate_output $code_dataset $wdir >> $log_out 2>> $log_err";
 
+say "\nStarted at ".(localtime);
 say "\nStep 5 : $cmd_step_5";
 
 `echo $cmd_step_5 >> $log_out 2>> $log_err`;
@@ -446,10 +514,14 @@ say "Cleaning the output directory";
 
 # We rm the first db to not overload user disk space
 my $db_revision_0 = catdir($wdir, 'r_0', 'db');
-if (-d $db_revision_0) {
-    $out = `rm -r $db_revision_0`;
-    say "rm -r $db_revision_0 : $out";
+#Comment out the next 4 lines to keep the database after processing!
+if ($keepdb == 0) {
+    if (-d $db_revision_0) {
+        $out = `rm -r $db_revision_0`;
+        say "rm -r $db_revision_0 : $out";
+    }
 }
+#Comment out the above 4 lines to keep the database after processing!
 
 #`mv $fastadir $wdir/Fasta_files`;
 
@@ -481,7 +553,7 @@ if (!-d $store_metric_files) {
 }
 
 safe_mv($out_file_affi, "$store_metric_files/VIRSorter_affi-contigs.tab");
-my $out_file_affi_ref = $code_dataset . "_affi-contigs.refs";
+my $out_file_affi_ref = catdir($wdir, $code_dataset . "_affi-contigs.refs");
 safe_mv($out_file_affi_ref, $store_metric_files);
 safe_mv($out_file_phage_fragments, "$store_metric_files/VIRSorter_phage_signal.tab");
 

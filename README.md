@@ -17,6 +17,43 @@ The categories of virus clusters represent the range of genomes in which this vi
 - Fasta_files/: intermediary files, including predicted proteins
 - Tab_files/: intermediary files, including results of the search agasint PFAM and the virus database.
 
+VirSorter results can be imported into [Anvi'o](http://merenlab.org/software/anvio/) by following [these instructions](http://merenlab.org/2018/02/08/importing-virsorter-annotations/).
+
+# Using a conda virtual environment (tested on Ubuntu and CentOS)
+* First install [Anaconda or Miniconda](https://conda.io/docs/user-guide/install/index.html)
+* Download the databases required by VirSorter which have been converted to be used with HMMER version 3.1b2. Change to the directory where you want the databases be, and then run the following commands:
+```
+wget https://zenodo.org/record/1168727/files/virsorter-data-v2.tar.gz
+md5sum virsorter-data-v2.tar.gz
+#m5sum should return dd12af7d13da0a85df0a9106e9346b45
+tar -xvzf virsorter-data-v2.tar.gz
+```
+* Create and install your conda virtual environment. Change to the directory where you want VirSorter to be installed and run the following commands:
+```
+conda create --name virsorter -c bioconda mcl=14.137 muscle blast perl-bioperl perl-file-which hmmer=3.1b2 perl-parallel-forkmanager perl-list-moreutils diamond
+git clone https://github.com/simroux/VirSorter.git
+cd VirSorter/Scripts
+make
+```
+* To run VirSorter from any directory, you can make symbolic links to `VirSorter/wrapper_phage_contigs_sorter_iPlant.pl` and `VirSorter/Scripts` and place them in the `bin` folder for your "virsorter" conda environment. An example location of this `bin` folder is `~/miniconda/envs/virsorter/bin`. Substitute this path with the path to the `bin` folder for your newly created "virsorter" environment.
+```
+ln -s ~/Applications/VirSorter/wrapper_phage_contigs_sorter_iPlant.pl ~/miniconda/envs/virsorter/bin
+ln -s ~/Applications/VirSorter/Scripts ~/miniconda/envs/virsorter/bin
+```
+* Finally, you'll need to download MetaGeneAnnotator ([Noguchi et al, 2006](https://doi.org/10.1093/nar/gkl723)). You can put this directly in the "virsorter" environment's `bin` folder alongside the VirSorter symbolic links taht were just created.
+```
+cd ~/miniconda/envs/virsorter/bin
+wget http://metagene.nig.ac.jp/metagene/mga_x86_64.tar.gz
+tar -xvzf metagene/mga_x86_64.tar.gz
+```
+
+To run VirSorter, type the following:
+
+```
+source activate virsorter
+wrapper_phage_contigs_sorter_iPlant.pl -f assembly.fasta --db 1 --wdir output_directory --ncpu 4 --data-dir /path/to/virsorter-data
+```
+
 # Docker - from DockerHub
 
 * Download the databases required by VirSorter, available as a tarball archive on iMicrobe: http://mirrors.iplantcollaborative.org/browse/iplant/home/shared/imicrobe/VirSorter/virsorter-data.tar.gz
@@ -43,7 +80,7 @@ Install the following into a "bin" directory:
 * Metagene Annotator (http://metagene.nig.ac.jp/metagene/download_mga.html)
 * MUSCLE (http://www.drive5.com/muscle/)
 * BLAST+ (ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/)
-
+* DIAMOND (https://github.com/bbuchfink/diamond)
 
 ## Data Container
 
