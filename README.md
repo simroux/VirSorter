@@ -125,6 +125,8 @@ A sample "run" command to use the current working directory for input/output:
 
 # Authors
 
-Simon Roux <roux.8@osu.edu> is the author of Virsorter
+Simon Roux <sroux@lbl.gov> is the author of Virsorter
 
 Ken Youens-Clark <kyclark@email.arizona.edu> packaged this for Docker/iPlant.
+
+Bryan D Merrill <bmerrill@stanford.edu> provided the improvements and additions for v1.0.5
