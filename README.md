@@ -54,7 +54,30 @@ source activate virsorter
 wrapper_phage_contigs_sorter_iPlant.pl -f assembly.fasta --db 1 --wdir output_directory --ncpu 4 --data-dir /path/to/virsorter-data
 ```
 
-# Docker - from DockerHub
+
+# Docker - from DockerHub (v1.0.5)
+
+* Download the databases required by VirSorter which have been converted to be used with HMMER version 3.1b2. Change to the directory where you want the databases be, and then run the following commands:
+```
+wget https://zenodo.org/record/1168727/files/virsorter-data-v2.tar.gz
+md5sum virsorter-data-v2.tar.gz
+#m5sum should return dd12af7d13da0a85df0a9106e9346b45
+tar -xvzf virsorter-data-v2.tar.gz
+```
+* Pull VirSorter 1.0.5 from dockerhub: $ docker pull simroux/virsorter:v1.0.5
+* Then run VirSorter from docker, mounting the data directory as data, and the run directory as wdir:
+```
+    $ docker run -v /host/path/to/virsorter-data:/data -v /host/path/to/virsorter-run:/wdir -w /wdir --rm discoenv/virsorter:v1.0.3 --db 2 --fna Input_contigs.fna
+
+```
+After "virsorter:v1.0.5", the options correspond to the ones described in wrapper_phage_contigs_sorter_iPlant.pl (here selecting the database "Viromes" and pointing VirSorter to the file "Input_contigs.fna").
+* You can specify a userID to be the owner of the files that will be created by VirSorter by using the --user option of Docker, e.g.
+```
+    $ docker run --user `id -u` -v /host/path/to/virsorter-data:/data -v /host/path/to/virsorter-run:/wdir -w /wdir --rm discoenv/virsorter:v1.0.3 --db 2 --fna Input_contigs.fna
+
+```
+
+# Docker - from DockerHub (v1.0.3)
 
 * Download the databases required by VirSorter, available as a tarball archive on iMicrobe: http://mirrors.iplantcollaborative.org/browse/iplant/home/shared/imicrobe/VirSorter/virsorter-data.tar.gz
 or /iplant/home/shared/imicrobe/VirSorter/virsorter-data.tar.gz through iPlant Discovery Environment
