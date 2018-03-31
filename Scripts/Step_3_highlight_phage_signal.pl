@@ -5,7 +5,7 @@ use autodie;
 use File::Spec::Functions;
 use FindBin '$Bin';
 use Parallel::ForkManager;
-use List::MoreUtils qw(natatime);
+# use List::MoreUtils qw(natatime);
 
 # Script to measure metrics on the sliding window
 # Argument 0 : csv file of the contigs
@@ -172,7 +172,7 @@ my $num_contigs = scalar(@liste_contigs);
 my $chunk_len = int($num_contigs/$n_cpus)+1;
 #print "$chunk_len\n";
 my @grouped = @liste_contigs;
-my $it = natatime $chunk_len, @grouped;
+my $it = &natatime($chunk_len, @grouped);
 
 my $pm = Parallel::ForkManager->new($n_cpus); #Starts the parent process for parallelizing the next foreach loop, sets max number of parallel processes
 #$pm->set_waitpid_blocking_sleep(0);
@@ -690,4 +690,13 @@ sub get_th_gene_size{
 	my $m=0;
 	if ($#tab % $div == 0){return ($tab[$#tab/$div]);}
 	else{return (($tab[($#tab-1)/$div]+$tab[($#tab+1)/$div])/2);}
+}
+
+sub natatime ($@)
+{
+	my $n    = shift;
+	my @list = @_;
+	return sub {
+		return splice @list, 0, $n;
+	}
 }
