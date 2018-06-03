@@ -30,7 +30,7 @@ tar -xvzf virsorter-data-v2.tar.gz
 ```
 * Create and install your conda virtual environment. Change to the directory where you want VirSorter to be installed and run the following commands:
 ```
-conda create --name virsorter -c bioconda mcl=14.137 muscle blast perl-bioperl perl-file-which hmmer=3.1b2 perl-parallel-forkmanager perl-list-moreutils diamond
+conda create --name virsorter -c bioconda mcl=14.137 muscle blast perl-bioperl perl-file-which hmmer=3.1b2 perl-parallel-forkmanager perl-list-moreutils diamond=0.9.14
 git clone https://github.com/simroux/VirSorter.git
 cd VirSorter/Scripts
 make
