@@ -29,6 +29,10 @@ Options:
 		 to save the database and point VirSorter to it in subsequent runs.
                  By default, this is off, and you should only specify this flag if 
 		 you're SURE you need it.
+  --no_c         Use this option if you have issues with empty output files, i.e. 0
+		 viruses predicted by VirSorter. This make VirSorter use a perl function 
+		 instead of the C script to calculate enrichment statistics. Note that 
+		 VirSorter will be slower with this option.
   --help         Show help and exit
 
 =head1 DESCRIPTION
