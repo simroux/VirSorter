@@ -61,6 +61,8 @@ my $wdir            = catdir(cwd(), 'virsorter-out');
 my $diamond         = 0;
 my $blastp          = 'blastp';
 my $keepdb          = 0;
+my $debug           = 0;
+my $no_c            = 0;
 
 GetOptions(
    'f|fna=s'     => \$input_file,
@@ -74,6 +76,8 @@ GetOptions(
    'diamond'     => \$diamond,
    'keep-db'     => \$keepdb,
    'h|help'      => \$help,
+   'debug'       => \$debug,
+   'no_c'        => \$no_c
 );
 
 if ($help) {
@@ -109,6 +113,14 @@ if ($diamond == 1) {
 }
 if ($tag_virome == 1) {
     say "WARNING: THIS WILL BE A VIROME DECONTAMINATION RUN";
+}
+
+if ($debug == 1){
+    say "This is a debug run === the result directory will not be nicely organized, but steps can be re-run independently\n";
+}
+
+if ($no_c == 1){
+    say "This is a 'no_c' run, so the C program in Step_3 will not be used and instead everything will be done in perl\n";
 }
 
 # Need 2 databases
@@ -270,13 +282,13 @@ my $cmd_merge
 
 my $script_detect = catfile($script_dir, "Step_3_highlight_phage_signal.pl");
 my $cmd_detect 
-    = "$script_detect $out_file_affi $out_file_phage_fragments $n_cpus "
+    = "$script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c "
     . ">> $log_out 2>> $log_err";
 
 if ($tag_virome == 1) {
     $cmd_detect 
-        = "$script_detect $out_file_affi $out_file_phage_fragments $n_cpus "
-        . "$generic_ref_file >> $log_out 2>> $log_err";
+        = "$script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c "
+        . "-ref $generic_ref_file >> $log_out 2>> $log_err";
 }
 
 my $script_summary = catfile($script_dir, "Step_4_summarize_phage_signal.pl");
@@ -508,6 +520,11 @@ say "\nStep 5 : $cmd_step_5";
 
 $out = `$cmd_step_5`;
 say "\t$out";
+
+
+if ($debug==1){
+	die("We stop there, we are in debug mode, so we don't rearrange the output directory\n");
+}
 
 # Plus clean the output directory
 say "Cleaning the output directory";

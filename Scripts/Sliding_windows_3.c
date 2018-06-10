@@ -102,10 +102,11 @@ int main(int argc, char **argv)
 // 	printf( "I am alive!  Beware.\n" );
 	FILE *ifp, *reffile;
 // 	char* refFilename=argv[1];
-	char* inputFilename=argv[2];char* outputFilename=argv[3];
+	char* inputFilename=argv[2];
+	char* outputFilename=argv[3];
 	
-	char *refFilename;
-	char *buffer = NULL;
+	char *refFilename=(char *)malloc(sizeof(char)*5000);
+	char *buffer = (char *)malloc(sizeof(char)*5000);
 	int read;
 	unsigned long len;
 	read = getline(&refFilename, &len, stdin);
