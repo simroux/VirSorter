@@ -55,7 +55,7 @@ source activate virsorter
 wrapper_phage_contigs_sorter_iPlant.pl -f assembly.fasta --db 1 --wdir output_directory --ncpu 4 --data-dir /path/to/virsorter-data
 ```
 
-* Note: A new option "--no_c" is available for cases where VirSorter result file is empty (i.e. 0 virus sequences predicted), due to errors in compiling or running the C script used to calculate enrichment statistics. With the "--no_c" option, VirSorter will use a perl function instead, which is slower, but should work on most systems and architectures.
+* Note: An option "--no_c" is available for cases where VirSorter result file is empty (0 virus sequences predicted) due to errors in compiling or running the C script used to calculate enrichment statistics. With the "--no_c" option, VirSorter will use a perl function instead, which is slower, but should work on most systems and architectures.
 
 
 # Docker - from DockerHub (v1.0.5)
