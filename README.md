@@ -25,7 +25,7 @@ VirSorter results can be imported into [Anvi'o](http://merenlab.org/software/anv
 ```
 wget https://zenodo.org/record/1168727/files/virsorter-data-v2.tar.gz
 md5sum virsorter-data-v2.tar.gz
-#m5sum should return dd12af7d13da0a85df0a9106e9346b45
+# md5sum should return dd12af7d13da0a85df0a9106e9346b45
 tar -xvzf virsorter-data-v2.tar.gz
 ```
 * Create and install your conda virtual environment. Change to the directory where you want VirSorter to be installed and run the following commands:
