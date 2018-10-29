@@ -45,7 +45,7 @@ ln -s ~/Applications/VirSorter/Scripts ~/miniconda/envs/virsorter/bin
 ```
 cd ~/miniconda/envs/virsorter/bin
 wget http://metagene.nig.ac.jp/metagene/mga_x86_64.tar.gz
-tar -xvzf metagene/mga_x86_64.tar.gz
+tar -xvzf mga_x86_64.tar.gz
 ```
 
 To run VirSorter, type the following:
