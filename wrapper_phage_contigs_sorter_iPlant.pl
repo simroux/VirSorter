@@ -224,6 +224,10 @@ my $fasta_contigs_nett
     = catfile($fastadir, $code_dataset . "_nett_filtered.fasta");
 my $fasta_file_prots = catfile($fastadir, $code_dataset . "_prots.fasta");
 
+if (!(-e $fasta_file_prots && -e $fasta_contigs_nett)){
+	die("Step 1 failed, we stop there");
+}
+
 # Match against PFAM, once for all
 # compare to PFAM a then b (hmmsearch)
 my $out_hmmsearch_pfama     = catfile($wdir, 'Contigs_prots_vs_PFAMa.tab');

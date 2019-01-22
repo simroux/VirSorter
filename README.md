@@ -47,6 +47,10 @@ cd ~/miniconda/envs/virsorter/bin
 wget http://metagene.nig.ac.jp/metagene/mga_x86_64.tar.gz
 tar -xvzf mga_x86_64.tar.gz
 ```
+Alternatively, you can install MetaGeneAnnotator in the conda environment as follows (thxs Simone Pignotti for the tip !):
+```
+conda install --name virsorter -c bioconda metagene_annotator
+```
 
 To run VirSorter, type the following:
 
@@ -57,6 +61,19 @@ wrapper_phage_contigs_sorter_iPlant.pl -f assembly.fasta --db 1 --wdir output_di
 
 * Note: An option "--no_c" is available for cases where VirSorter result file is empty (0 virus sequences predicted) due to errors in compiling or running the C script used to calculate enrichment statistics. With the "--no_c" option, VirSorter will use a perl function instead, which is slower, but should work on most systems and architectures.
 
+
+* Note: If error: "ListUtil.c: loadable library and perl binaries are mismatched", this is a known conda issue, that can be fixed with the following steps:
+Create a file etc/conda/activate.d/update_perllib.sh in your conda environment folder including the following lines:
+```
+#!/bin/sh
+export OLD_PERL5LIB=$PERL5LIB
+export PERL5LIB=`pwd`/../../../lib/site_perl/5.26.2/
+```
+Then create a file etc/conda/deactivate.d/update_perllib.sh in your conda environment folder including the following lines:
+```
+#!/bin/sh
+export PERL5LIB=$OLD_PERL5LIB
+```
 
 # Docker - from DockerHub (v1.0.5)
 

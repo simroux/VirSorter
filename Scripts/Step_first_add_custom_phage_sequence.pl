@@ -39,7 +39,12 @@ my $path_to_muscle      = which("muscle")         or die "No muscle\n";
 my $path_to_hmmbuild    = which("hmmbuild")       or die "No hmmbuild\n";
 my $path_to_hmmpress    = which("hmmpress")       or die "No hmmpress\n";
 my $path_hmmsearch      = which("hmmsearch")      or die "No hmmsearch\n";
-my $path_to_mga         = which("mga_linux_ia64") or die "No mga\n";
+my $path_to_mga       = which('mga_linux_ia64');
+my $path_to_mga_bis   = which('mga');
+if ($path_to_mga eq ""){
+	if ($path_to_mga_bis eq ""){die("Couldn't find a path for mga, either mga_linux_ia64 (docker) or mga (conda)")}
+	else{$path_to_mga=$path_to_mga_bis;}
+}
 my $MCX_LOAD            = which("mcxload")        or die "No mcxload\n";
 my $MCL                 = which("mcl")            or die "No mcl\n";
 
