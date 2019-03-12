@@ -101,8 +101,7 @@ if (-e $circu_file){
 	}
 	close $tsv;
 	open my $s3, '>', $out_special_circu;
-	my $long=1000; # we cp the 1000 first bases to the end of the contig
-	my $seuil_long=1000;
+	my $long=10000; # we cp the 10000 first bases to the end of the contig
 	my $n_circu=0;
 	foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %circu){
 		my $id_c=$_;
