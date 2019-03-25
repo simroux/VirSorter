@@ -19,6 +19,8 @@ The categories of virus clusters represent the range of genomes in which this vi
 
 VirSorter results can be imported into [Anvi'o](http://merenlab.org/software/anvio/) by following [these instructions](http://merenlab.org/2018/02/08/importing-virsorter-annotations/).
 
+VirSorter results can also be imported into R by following [these instructions](https://github.com/simroux/VirSorter/issues/37#issuecomment-475740536).
+
 # Using a conda virtual environment (tested on Ubuntu and CentOS)
 * First install [Anaconda or Miniconda](https://conda.io/docs/user-guide/install/index.html)
 * Download the databases required by VirSorter which have been converted to be used with HMMER version 3.1b2. Change to the directory where you want the databases be, and then run the following commands:
