@@ -308,7 +308,8 @@ if (-e $last_affi){
 								my $length=$new_stop-$start;
 								print "  which becomes from $start to $stop ($length)\n";
 								my $substr=substr($seq_c,$start,$length);
-								$sequence = Bio::Seq::RichSeq->new(-display_id => "$id_red", -accession_number => "$id_red", -desc => $desc ,-seq =>"$substr",-is_circular =>$iscirc,-division => "ENV",-alphabet => "dna");
+								my $display_id=$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"};
+								$sequence = Bio::Seq::RichSeq->new(-display_id => "$display_id", -accession_number => "$display_id", -desc => $desc ,-seq =>"$substr",-is_circular =>$iscirc,-division => "ENV",-alphabet => "dna");
 								$sequence->add_date(`date +%D`);
 								my $featsource = Bio::SeqFeature::Generic->new(-start => 1,-end => length($substr),-primary => "source",-tag => {'organism' => "$desc"});
 								$sequence->add_SeqFeature($featsource);
@@ -347,15 +348,15 @@ if (-e $last_affi){
 									}
 								}
 								if ($check{$id_c}{$_}{"category"}==4){
-									print SP1 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"}."\n$substr\n";
+									print SP1 ">".$display_id."\n$substr\n";
 									$output_p1->write_seq($sequence);
 								}
 								elsif ($check{$id_c}{$_}{"category"}==5){
-									print SP2 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"}."\n$substr\n";
+									print SP2 ">".$display_id."\n$substr\n";
 									$output_p2->write_seq($sequence);
 								}
 								elsif($check{$id_c}{$_}{"category"}==6){
-									print SP3 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"}."\n$substr\n";
+									print SP3 ">".$display_id."\n$substr\n";
 									$output_p3->write_seq($sequence);
 								}
 							}
@@ -454,7 +455,7 @@ if (-e $last_affi){
 						$sequence->add_SeqFeature($featsource);
 						foreach(sort { $infos{$id_c}{$a}{"order"} <=> $infos{$id_c}{$b}{"order"} } keys %{$infos{$id_c}}){
 							my $gene=$_;
-							if ((($infos{$id_c}{$gene}{"start"}-$start)>0) && (($infos{$id_c}{$gene}{"start"}-$start)<=$stop) && (($infos{$id_c}{$gene}{"stop"}-$start)>0) && (($infos{$id_c}{$gene}{"stop"}-$start)<=$stop)){
+							if (($infos{$id_c}{$gene}{"start"}>=$start) && ($infos{$id_c}{$gene}{"start"}<=$stop) && ($infos{$id_c}{$gene}{"stop"}>=$start) && ($infos{$id_c}{$gene}{"stop"}<=$stop)){
 								my $splitlocation = Bio::Location::Split->new();
 								my $strand=0;
 								if ($infos{$id_c}{$gene}{"strand"} eq "-"){$strand=-1;}
@@ -488,7 +489,8 @@ if (-e $last_affi){
 						my $length=$new_stop-$start;
 						print "  which becomes from $start to $stop ($length)\n";
 						my $substr=substr($seq_c,$start,$length);
-						$sequence = Bio::Seq::RichSeq->new(-display_id => "$id_red", -accession_number => "$id_red", -desc => $desc ,-seq =>"$substr",-is_circular =>$iscirc,-division => "ENV",-alphabet => "dna");
+						my $display_id=$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"};
+						$sequence = Bio::Seq::RichSeq->new(-display_id => "$display_id", -accession_number => "$display_id", -desc => $desc ,-seq =>"$substr",-is_circular =>$iscirc,-division => "ENV",-alphabet => "dna");
 						$sequence->add_date(`date +%D`);
 						my $featsource = Bio::SeqFeature::Generic->new(-start => 1,-end => length($substr),-primary => "source",-tag => {'organism' => "$desc"});
 						$sequence->add_SeqFeature($featsource);
@@ -527,15 +529,15 @@ if (-e $last_affi){
 							}
 						}
 						if ($check{$id_c}{$_}{"category"}==4){
-							print SP1 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"}."\n$substr\n";
+							print SP1 ">".$display_id."\n$substr\n";
 							$output_p1->write_seq($sequence);
 						}
 						elsif ($check{$id_c}{$_}{"category"}==5){
-							print SP2 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"}."\n$substr\n";
+							print SP2 ">".$display_id."\n$substr\n";
 							$output_p2->write_seq($sequence);
 						}
 						elsif($check{$id_c}{$_}{"category"}==6){
-							print SP3 ">".$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"}."\n$substr\n";
+							print SP3 ">".$display_id."\n$substr\n";
 							$output_p3->write_seq($sequence);
 						}
 					}
