@@ -655,6 +655,7 @@ sub safe_mv {
 
 sub verbose {
 	my ($text) = @_;
+	return unless ($opt_verbose);
 	print STDERR color('yellow'), ""  unless (defined $ENV{'NO_COLOR'});
 	say STDERR  " * $text";
 	print STDERR color('reset'), "" unless (defined $ENV{'NO_COLOR'});
