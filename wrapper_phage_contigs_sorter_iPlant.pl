@@ -13,7 +13,8 @@ Options:
   -d|--dataset   Code dataset (DEFAULT "VIRSorter")
   --cp           Custom phage sequence 
   --db           Either "1" (DEFAULT Refseqdb) or "2" (Viromedb)
-  --wdir         Working directory (DEFAULT cwd)
+  --wdir         Working directory (DEFAULT $PWD/virsorter-out/)
+                 Will be created if not existing.
   --ncpu         Number of CPUs (default: 4)
   --virome       Add this flag to enable virome decontamination mode, for datasets
                  mostly viral to force the use of generic metrics instead of 
@@ -89,15 +90,16 @@ if ($help) {
 }
 
 unless ($input_file) {
-    pod2usage('Missing FASTA file');
+    pod2usage('MISSING PARAMETER: Specify the input FASTA file with --fna FILENAME');
 }
 
 if ($choice_database < 1 || $choice_database > 3) {
-    pod2usage('choice_database must be 1, 2, or 3');
+    pod2usage('WRONG PARAMETER: choice_database must be 1, 2, or 3');
 }
 
 if ($diamond == 1) {
-    $blastp = 'diamond'
+    $blastp = 'diamond';
+    say "This VirSorter run uses `diamond` (Buchfink et al., Nature Methods 2015) instead of `blastp`.\n";
 }
 
 say map { sprintf "%-15s: %s\n", @$_ } (
@@ -112,9 +114,7 @@ say map { sprintf "%-15s: %s\n", @$_ } (
     ['blastp',        $blastp],
 );
 
-if ($diamond == 1) {
-    say "This VirSorter run uses DIAMOND (Buchfink et al., Nature Methods 2015) instead of blastp.\n";
-}
+ 
 if ($tag_virome == 1) {
     say "WARNING: THIS WILL BE A VIROME DECONTAMINATION RUN";
 }
@@ -131,8 +131,8 @@ if ($no_c == 1){
 # PCs from Refseq (phages) or PCs from Refseq+Viromes
 # PFAM (27.0)
 
-my $path_hmmsearch     = which('hmmsearch') or die "Missing hmmsearch\n";
-my $path_blastp        = which('blastp')    or die "Missing blastp\n";
+my $path_hmmsearch     = which('hmmsearch') or die "FATAL ERROR: `hmmsearch` is not in the \$PATH\n";
+my $path_blastp        = which('blastp')    or die "FATAL ERROR: `blastp` is not in the \$PATH\n";
 my $path_diamond       = '';
 my $script_dir         = catdir($Bin, 'Scripts');
 my $dir_Phage_genes    = catdir($data_dir,'Phage_gene_catalog');
@@ -140,7 +140,7 @@ my $readme_file        = catfile($data_dir, 'VirSorter_Readme.txt');
 my $ref_phage_clusters = catfile($data_dir,
                          'Phage_gene_catalog', 'Phage_Clusters_current.tab');
 if ($diamond == 1) {
-    $path_diamond      = which('diamond')   or die "Missing diamond\n";
+    $path_diamond      = which('diamond')   or die "FATAL ERROR: `diamond` is not in the \$PATH\n";
 }
 
 if ($tag_virome == 1) {
