@@ -53,6 +53,7 @@ use File::Which 'which';
 use Getopt::Long 'GetOptions';
 use Pod::Usage;
 use Cwd 'cwd';
+use Term::ANSIColor;
 
 my $help            = '';
 my $code_dataset    = 'VIRSorter';
@@ -68,6 +69,7 @@ my $blastp          = 'blastp';
 my $keepdb          = 0;
 my $debug           = 0;
 my $no_c            = 0;
+my $opt_verbose;
 
 GetOptions(
    'f|fna=s'     => \$input_file,
@@ -82,7 +84,8 @@ GetOptions(
    'keep-db'     => \$keepdb,
    'h|help'      => \$help,
    'debug'       => \$debug,
-   'no_c'        => \$no_c
+   'no_c'        => \$no_c,
+   'verbose'     => \$opt_verbose,		# Enable verbose output
 );
 
 if ($help) {
@@ -127,6 +130,11 @@ if ($no_c == 1){
     say "This is a 'no_c' run, so the C program in Step_3 will not be used and instead everything will be done in perl\n";
 }
 
+# Check if "working directory" already exists
+if (-d "$wdir") {
+    verbose("WARNING");
+    say STDERR "Working directory already present: \"$wdir\".\nIf this contains an aborted run, the script will terminate!\n";
+}
 # Need 2 databases
 # PCs from Refseq (phages) or PCs from Refseq+Viromes
 # PFAM (27.0)
@@ -139,12 +147,18 @@ my $dir_Phage_genes    = catdir($data_dir,'Phage_gene_catalog');
 my $readme_file        = catfile($data_dir, 'VirSorter_Readme.txt');
 my $ref_phage_clusters = catfile($data_dir,
                          'Phage_gene_catalog', 'Phage_Clusters_current.tab');
+
+verbose("hmmsearch: $path_hmmsearch");
+verbose("blastp:    $path_blastp");
+verbose("diamond:   $path_diamond");
 if ($diamond == 1) {
     $path_diamond      = which('diamond')   or die "FATAL ERROR: `diamond` is not in the \$PATH\n";
+    verbose("Diamond path found: $path_diamond");
 }
 
 if ($tag_virome == 1) {
     $readme_file = catfile($data_dir, 'VirSorter_Readme_viromes.txt');
+    verbose("VirSorter readme found: $readme_file");
 }
 
 my $generic_ref_file = catfile($data_dir,'Generic_ref_file.refs');
@@ -225,7 +239,7 @@ my $fasta_contigs_nett
 my $fasta_file_prots = catfile($fastadir, $code_dataset . "_prots.fasta");
 
 if (!(-e $fasta_file_prots && -e $fasta_contigs_nett)){
-	die("Step 1 failed, we stop there");
+	die("Step 1 failed, we stop there: either $fasta_file_prots or $fasta_contigs_nett were not found\n");
 }
 
 # Match against PFAM, once for all
@@ -637,4 +651,11 @@ sub safe_mv {
     return unless -e $src;
     return unless -e $src;
     `mv $src $dest`;
+}
+
+sub verbose {
+	my ($text) = @_;
+	print STDERR color('yellow'), ""  unless (defined $ENV{'NO_COLOR'});
+	say STDERR  " * $text";
+	print STDERR color('reset'), "" unless (defined $ENV{'NO_COLOR'});
 }
