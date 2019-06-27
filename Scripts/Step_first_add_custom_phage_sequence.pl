@@ -160,7 +160,7 @@ foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 			$frag.=substr($seq_c,0,$stop);
 		}
 		## POUR RECUPERER LA SEQ PROT
-		my $seq_bio = Bio::Seq->new(-seq =>$frag,-alphabet => 'dna' );
+		my $seq_bio = Bio::Seq->new(id=>"dummyid",-seq =>$frag,-alphabet => 'dna' );
 		my @seqs = Bio::SeqUtils->translate_6frames($seq_bio);
 		my $cadre=0;
 		if ($sens eq "-"){$cadre=3;}
