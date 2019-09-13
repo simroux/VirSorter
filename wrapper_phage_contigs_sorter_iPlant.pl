@@ -460,7 +460,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
                 "--out $out_blast_new_unclustered",
                 "--threads $n_cpus", 
                 "--outfmt 6",
-                "-b 2", #Uses at most approx. b * 6 GB of RAM. -b 2 will use at most ~12 GB of RAM.
+                "-b 1", #Uses at most approx. b * 6 GB of RAM. -b 1 will use at most ~6 GB of RAM. ## Changed to -b 1 to avoid oom issues
                 "--more-sensitive",
                 "-k 500", #This is the default max sequences for blastp
                 "--evalue 0.001 >> $log_out 2>> $log_err"
