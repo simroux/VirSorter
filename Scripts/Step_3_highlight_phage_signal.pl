@@ -40,8 +40,13 @@ if ( -e $out_file ) { `rm $out_file`; }
 $ref_file=$csv_file;
 $ref_file =~ s/\.csv/.refs/g;
 my $do_ref_estimation = 0;
-if ($external_ref ne ""){ # If we specify a ref file, that's because we are in a virome decontamination mode
-	`cp $external_ref $ref_file`;
+if ($external_ref ne ""){ # If we specify a ref file, that's because we are in a virome decontamination mode or in round1+, i.e. we don't want to reevaluate background probabilities
+	if ($external_ref eq $ref_file){
+		### External ref is already ref file, no need to do anything
+	}
+	else{
+		`cp $external_ref $ref_file`;
+	}
 	$do_ref_estimation=1;
 }
 

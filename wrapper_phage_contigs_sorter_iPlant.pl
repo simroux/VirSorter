@@ -2,7 +2,7 @@
 
 =head1 SYNOPSIS
 
-  wrapper_phage_contigs_sorter_iPlant.pl --fasta sequences.fa
+  wrapper_phage_contigs_sorter_iPlant.pl --fna sequences.fa
 
 Required Arguments:
 
@@ -303,20 +303,16 @@ my $cmd_merge
     . "$out_file_affi >> $log_out 2>> $log_err";
 
 my $script_detect = catfile($script_dir, "Step_3_highlight_phage_signal.pl");
-my $cmd_detect 
-    = "$script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c "
-    . ">> $log_out 2>> $log_err";
-
+my $cmd_detect = "$script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c ". ">> $log_out 2>> $log_err";
+my $ref_file = $out_file_affi;
+$ref_file =~ s/\.csv/.refs/g;
+my $cmd_detect_rd1 = "$script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c ". "-ref $ref_file >> $log_out 2>> $log_err"; ## for use after rd1
 if ($tag_virome == 1) {
-    $cmd_detect 
-        = "$script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c "
-        . "-ref $generic_ref_file >> $log_out 2>> $log_err";
+    $cmd_detect = "$script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c ". "-ref $generic_ref_file >> $log_out 2>> $log_err";
 }
 
 my $script_summary = catfile($script_dir, "Step_4_summarize_phage_signal.pl");
-my $cmd_summary 
-    = "$script_summary $out_file_affi $out_file_phage_fragments "
-    . "$global_out_file $new_prots_to_cluster >> $log_out 2>> $log_err";
+my $cmd_summary = "$script_summary $out_file_affi $out_file_phage_fragments " . "$global_out_file $new_prots_to_cluster >> $log_out 2>> $log_err";
 
 # # Get the final result file ready
 `touch $global_out_file`;
@@ -335,8 +331,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         say "Out : $out";
 
         ## Clustering of the new prots with the unclustered
-        my $script_new_cluster 
-            = catfile($script_dir, "Step_0_make_new_clusters.pl");
+        my $script_new_cluster  = catfile($script_dir, "Step_0_make_new_clusters.pl");
         
         # First revision, we just import the Refseq database
         if ( $r_n == 0 ) {
@@ -393,6 +388,8 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
             # clustered
             $out = `rm $new_prots_to_cluster`;
             #print "rm $new_prots_to_cluster -> $out\n";
+            ## From now on, we use the ref file that was generated with r_0 (or cp pasted from external ref if virome)
+            $cmd_detect = $cmd_detect_rd1;
         }
 
         # Check if there are some data in these new clusters, or if all the new
@@ -543,6 +540,10 @@ say "\nStep 5 : $cmd_step_5";
 $out = `$cmd_step_5`;
 say "\t$out";
 
+# New check: verify the final result in terms of bp to see if we should print a warning to maybe use the Virome Decontamination mode
+if ($tag_virome != 1){
+	&check_for_decontamination($wdir,$fasta_contigs_nett,$code_dataset);
+}
 
 if ($debug==1){
 	die("We stop there, we are in debug mode, so we don't rearrange the output directory\n");
@@ -659,4 +660,69 @@ sub verbose {
 	print STDERR color('yellow'), ""  unless (defined $ENV{'NO_COLOR'});
 	say STDERR  " * $text";
 	print STDERR color('reset'), "" unless (defined $ENV{'NO_COLOR'});
+}
+
+sub check_for_decontamination {
+	my $dir_out = catdir($_[0], "Predicted_viral_sequences");
+	my $in_fasta = $_[1];
+	my $code = $_[2];
+	my $out_file_1  = catfile( $dir_out, $code . '_cat-1.fasta' );
+	my $out_file_2  = catfile( $dir_out, $code . '_cat-2.fasta' );
+	my $out_file_3  = catfile( $dir_out, $code . '_cat-3.fasta' );
+	my $out_file_p1 = catfile( $dir_out, $code . '_prophages_cat-4.fasta' );
+	my $out_file_p2 = catfile( $dir_out, $code . '_prophages_cat-5.fasta' );
+	my $out_file_p3 = catfile( $dir_out, $code . '_prophages_cat-6.fasta' );
+	my %count;
+	my %check;
+	my %store_len;
+	### Check all contigs 10kb+ and take the total cumulated length of these
+	open my $fa,"<",$in_fasta;
+	my $c_c="";
+	my $c_seq=0;
+	while(<$fa>){
+		chomp($_);
+		if ($_=~/^>(\S+)/){
+			my $tmp=$1;
+			if ($c_seq>=10000){
+				$check{$c_c}=1;
+				$count{"total"}+=$c_seq;
+				$store_len{$c_c}=$c_seq;
+			}
+			$c_c=$tmp;
+			$c_seq=0;
+		}
+		else{
+			$c_seq+=length($_);
+		}
+	}
+	close $fa;
+	if (length($c_seq)>=10000){
+		$check{$c_c}=1;
+		$count{"total"}+=$c_seq;
+		$store_len{$c_c}=$c_seq;
+	}
+	open my $fa_2,"cat $out_file_1 $out_file_2 $out_file_3 |";
+	while(<$fa_2>){
+		chomp($_);
+		if ($_=~/^>(\S+)-cat_\d/){$count{"viral"}+=$store_len{$1};}
+	}
+	close $fa_2;
+	open my $fa_3,"cat $out_file_p1 $out_file_p2 $out_file_p3 |";
+	while(<$fa_3>){
+		chomp($_);
+		if ($_=~/^>\S+-gene_\d+_gene_\d+-(\d+)-(\d+)-cat_\d/){$count{"viral"}+=($2-$1+1);}
+	}
+	close $fa_3;
+	
+	if ($count{"total"}==0){}
+	else{
+		print "## Verify if this should have been a virome decontamination mode based on 10kb+ contigs\n";
+		my $ratio=$count{"viral"}/$count{"total"};
+		if ($ratio>0.25){
+			print "#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!##!#!#!#!#!#!#!#!##!#!#!#!#!#!#!#!#\n";
+			print "More than 25% of the bp in contigs >= 10kb were predicted as viral (estimated ratio: ".sprintf("%.02f",$ratio*100)."%\n";
+			print "You may want to use the virome decontamination mode on this dataset, as it seems to have lot of viruses\n";
+			print "#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!##!#!#!#!#!#!#!#!##!#!#!#!#!#!#!#!#\n";
+		}
+	}
 }

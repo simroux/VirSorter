@@ -80,6 +80,7 @@ else{
 
 my %check_prot_new;
 my %check_contig_new;
+my $tag_to_remove=0;
 open SUM, '<', $new_summary;
 while (<SUM>){
 	chomp($_);
@@ -113,44 +114,54 @@ while (<SUM>){
 	}
 	else{
 		my $class=6;
-		if ($tab[5]==1){
-			$class=4;
-			# If the category is 1, we check all the prot from this fragment
-			$tab[2]=~/.*-gene_(\d*)-gene_(\d*)/;
-			for (my $i=$1;$i<=$2;$i++){
-				my $prot_id=$tab[0]."-gene_".$i;
-				$check_prot_new{$prot_id}=1;
-				print "we check new $prot_id\n";
-			}
-		}
-		elsif($tab[5]==2){$class=5;}
-		# Remove all former prophages (if any) is there is an overlap
+		# Remove all former prophages (if any) is there is an overlap, and remove new predictions if they are within an existing prophage
+		$tag_to_remove=0;
 		for (my $i=4;$i<=6;$i++){
 			if (defined $infos{$i}{$tab[0]}){
+				print "We had previous detection(s) of class $i for $tab[0] -- checking for overlaps\n";
 				foreach (keys %{$infos{$i}{$tab[0]}}){
 					if (overlap($tab[2],$_)==1){
-						print "Overlap between $tab[1] and $_, we remove $_ ($tab[0] - 3)\n";
+						print "Overlap: $_ within $tab[2], we remove $_ ($tab[0])\n";
 						delete($infos{$i}{$tab[0]}{$_});
+					}
+					elsif(overlap($_,$tab[2])==1){
+						print "Overlap: new $tab[2] within previous $_, we don't retain $tab[2]\n";
+						$tag_to_remove=1;
 					}
 				}
 			}
 		}
- 		for(my $i=5;$i<=$#tab;$i++){
- 			if ($tab[$i]=~/(.*);$/){
- 				$tab[$i]=$1;
- 			}
- 		}
-# 		print "Prophage $class / $tab[0] - $tab[2]\n";
-		$infos{$class}{$tab[0]}{$tab[2]}{"nb_gene_contig"}=$tab[1];
-		$infos{$class}{$tab[0]}{$tab[2]}{"nb_gene"}=$tab[3];
-		$infos{$class}{$tab[0]}{$tab[2]}{"category"}=$tab[5];
-		$infos{$class}{$tab[0]}{$tab[2]}{"phage"}=$tab[6];
-		$infos{$class}{$tab[0]}{$tab[2]}{"noncaudo"}=$tab[7];
-		$infos{$class}{$tab[0]}{$tab[2]}{"pfam"}=$tab[8];
-		$infos{$class}{$tab[0]}{$tab[2]}{"unch"}=$tab[9];
-		$infos{$class}{$tab[0]}{$tab[2]}{"switch"}=$tab[10];
-		$infos{$class}{$tab[0]}{$tab[2]}{"size"}=$tab[11];
-		$infos{$class}{$tab[0]}{$tab[2]}{"hallmark"}=$tab[12];
+ 		if ($tag_to_remove==1){}
+ 		else{
+			if ($tab[5]==1){
+				$class=4;
+				# If the category is 1, we check all the prot from this fragment
+				$tab[2]=~/.*-gene_(\d*)-gene_(\d*)/;
+				for (my $i=$1;$i<=$2;$i++){
+					my $prot_id=$tab[0]."-gene_".$i;
+					$check_prot_new{$prot_id}=1;
+					print "we check new $prot_id\n";
+				}
+			}
+			elsif($tab[5]==2){$class=5;}
+			## clean hanging ; 
+			for(my $i=5;$i<=$#tab;$i++){
+				if ($tab[$i]=~/(.*);$/){
+					$tab[$i]=$1;
+				}
+			}
+			print "Prophage $class / $tab[0] - $tab[2]\n";
+			$infos{$class}{$tab[0]}{$tab[2]}{"nb_gene_contig"}=$tab[1];
+			$infos{$class}{$tab[0]}{$tab[2]}{"nb_gene"}=$tab[3];
+			$infos{$class}{$tab[0]}{$tab[2]}{"category"}=$tab[5];
+			$infos{$class}{$tab[0]}{$tab[2]}{"phage"}=$tab[6];
+			$infos{$class}{$tab[0]}{$tab[2]}{"noncaudo"}=$tab[7];
+			$infos{$class}{$tab[0]}{$tab[2]}{"pfam"}=$tab[8];
+			$infos{$class}{$tab[0]}{$tab[2]}{"unch"}=$tab[9];
+			$infos{$class}{$tab[0]}{$tab[2]}{"switch"}=$tab[10];
+			$infos{$class}{$tab[0]}{$tab[2]}{"size"}=$tab[11];
+			$infos{$class}{$tab[0]}{$tab[2]}{"hallmark"}=$tab[12];
+		}
 	}
 }
 
@@ -242,8 +253,8 @@ while (<AFI>){
 		# gene_id|start|stop|length|strand|affi_phage|score|evalue|category|affi_pfam|score|evalue|
 		my @tab=split(/\|/,$_);
 		my $gene=$tab[0];
-		if (($check_prot_new{$gene}==1 && !defined($check_prot_old{$gene})) || (($check_contig_new{$contig_c}==1) && !defined($check_contig_old{$contig_c}))){
-# 			print "Ah, a new prot, putatively a new cluster\n";
+		if (($check_prot_new{$gene}==1 && !defined($check_prot_old{$gene}) && !defined($check_contig_old{$contig_c})) || (($check_contig_new{$contig_c}==1) && !defined($check_contig_old{$contig_c}))){
+# 			print "Ah, a new prot, putatively a new cluster - $gene - $contig_c\n";
 			if ($tab[5] eq "-"){ 
 # 				print "\t oh yep, no phage cluster, so we take this\n";
 				push(@liste_to_add,$gene);
