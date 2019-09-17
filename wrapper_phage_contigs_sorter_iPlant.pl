@@ -673,6 +673,8 @@ sub check_for_decontamination {
 	my $out_file_p2 = catfile( $dir_out, $code . '_prophages_cat-5.fasta' );
 	my $out_file_p3 = catfile( $dir_out, $code . '_prophages_cat-6.fasta' );
 	my %count;
+	$count{"viral"}=0;
+	$count{"total"}=0;
 	my %check;
 	my %store_len;
 	### Check all contigs 10kb+ and take the total cumulated length of these
