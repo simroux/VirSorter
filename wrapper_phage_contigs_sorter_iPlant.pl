@@ -199,15 +199,19 @@ my $fastadir = catdir($wdir, 'fasta');
 if ( !-d $fastadir ) {
     mkpath($fastadir);
     my $fna_file = catfile($fastadir, 'input_sequences.fna');
+    my $tsv_file = catfile($fastadir, 'input_sequences_id_translation.tsv');
     open my $fa, '<', $input_file;
     open my $s1, '>', $fna_file;
+    open my $s2, '>', $tsv_file;
 
     while (<$fa>) {
         chomp($_);
         if ( $_ =~ /^>(.*)/ ) {
             my $id = $1;
+            print $s2 $id."\t";
             $id =~ s/[\/\.,\|\s?!\*%]/_/g;
             my $new_id = $code_dataset . "_" . $id;
+            print $s2 $new_id."\n";
             say $s1 ">$new_id";
         }
         else {
@@ -217,6 +221,7 @@ if ( !-d $fastadir ) {
     }
     close $fa;
     close $s1;
+    close $s2;
 
     # detect circular, predict genes on contigs and extract proteins, as well
     # as filtering on size (nb genes) and/or circular
