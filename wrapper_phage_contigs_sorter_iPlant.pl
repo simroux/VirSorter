@@ -478,9 +478,13 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         $out = `$cmd_blast_unclustered`;
 
         say "\t$out";
-        $out = `cat $out_blast_new_unclustered >> $out_blast_unclustered`;
-
-        say "\t$out";
+        if (-e $out_blast_unclustered){
+		$out = `cat $out_blast_new_unclustered >> $out_blast_unclustered`;
+		say "\t$out";
+	}
+	else{
+		say "\tNo file $out_blast_new_unclustered, nothing new to add to $out_blast_unclustered\n";
+	}
 
         # Make backup of the previous files to have 
         # trace of the different steps
