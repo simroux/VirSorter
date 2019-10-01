@@ -478,7 +478,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
         $out = `$cmd_blast_unclustered`;
 
         say "\t$out";
-        if (-e $out_blast_unclustered){
+        if (-e $out_blast_new_unclustered){
 		$out = `cat $out_blast_new_unclustered >> $out_blast_unclustered`;
 		say "\t$out";
 	}
@@ -712,18 +712,22 @@ sub check_for_decontamination {
 		$count{"total"}+=$c_seq;
 		$store_len{$c_c}=$c_seq;
 	}
-	open my $fa_2,"cat $out_file_1 $out_file_2 $out_file_3 |";
-	while(<$fa_2>){
-		chomp($_);
-		if ($_=~/^>(\S+)-cat_\d/){$count{"viral"}+=$store_len{$1};}
+	if (-e $out_file_1 || -e $out_file_2 || -e $out_file_3){
+		open my $fa_2,"cat $out_file_1 $out_file_2 $out_file_3 |";
+		while(<$fa_2>){
+			chomp($_);
+			if ($_=~/^>(\S+)-cat_\d/){$count{"viral"}+=$store_len{$1};}
+		}
+		close $fa_2;
 	}
-	close $fa_2;
-	open my $fa_3,"cat $out_file_p1 $out_file_p2 $out_file_p3 |";
-	while(<$fa_3>){
-		chomp($_);
-		if ($_=~/^>\S+-gene_\d+_gene_\d+-(\d+)-(\d+)-cat_\d/){$count{"viral"}+=($2-$1+1);}
+	if (-e $out_file_p1 || -e $out_file_p2 || -e $out_file_p3){
+		open my $fa_3,"cat $out_file_p1 $out_file_p2 $out_file_p3 |";
+		while(<$fa_3>){
+			chomp($_);
+			if ($_=~/^>\S+-gene_\d+_gene_\d+-(\d+)-(\d+)-cat_\d/){$count{"viral"}+=($2-$1+1);}
+		}
+		close $fa_3;
 	}
-	close $fa_3;
 	
 	if ($count{"total"}==0){}
 	else{
