@@ -361,6 +361,11 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
 				    
                 say "Adding custom phage to the database : \n$add_first\n";
                 $out = `$add_first`;
+                ## Test that everything went all right, if not die there
+                my $test=catfile($dir_revision,"/db/Pool_new_unclustered.faa");
+                if (!(-e $test)){
+			die("There was a problem with the custom phage sequence processing, please double-check that a fasta file of nucleotide sequence(s) is provided with the option --cp");
+                }
             }
             # should replace Pool_cluster / Pool_unclustered and
             # Pool_new_unclustered else , we just import the Refseq database

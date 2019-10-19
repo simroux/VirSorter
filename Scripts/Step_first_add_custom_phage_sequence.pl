@@ -73,31 +73,32 @@ my $fasta_unclustered     = $tmp_dir . "Pool_new_unclustered.faa";
 my $ref_phage_clusters    = $tmp_dir . "Phage_Clusters_current.tab";
 my $blast_unclustered     = $tmp_dir . "Blast_unclustered.tab";
 
-open(F1,"<$fasta_contigs") || die "pblm ouverture fichier $fasta_contigs\n";
+
+open my $fa,"<",$fasta_contigs;
 my %seq_base;
 my $id_seq="";
 my $i=0;
 my %order_contig;
-while(<F1>){
+while(<$fa>){
 	$_=~s/\r\n/\n/g; #Cas d'un fichier windows ##AJOUT
 	chomp($_);
 	if ($_=~/^>(\S*)/){$id_seq=$1;$order_contig{$id_seq}=$i;$i++}
 	else{$seq_base{$id_seq}.=$_;}
 }
-close F1;
+close $fa;
 
 
 # Predict genes on the new phages
-my $out_file= $db_out."/Custom_phages_mga.predict";
+my $out_file= $tmp_dir."/Custom_phages_mga.predict";
 print "$path_to_mga $fasta_contigs -m > $out_file\n";
 my $mga=`$path_to_mga $fasta_contigs -m > $out_file`;
 my %order_gene;
 my $n2=0;
-open(RESU,"<$out_file")  || die "pblm ouverture fichier $out_file\n";
+open my $txt,"<",$out_file;
 my %predict;
 my %type;
 my $id_c="";
-while(<RESU>){
+while(<$txt>){
 	chomp($_);
 	if($_=~/^# gc/){}
 	elsif($_=~/^# self: (.*)/){$type{$id_c}=$1;}
@@ -111,19 +112,18 @@ while(<RESU>){
 		if (!defined($order_gene{$id_c}{$tab[0]})){$order_gene{$id_c}{$tab[0]}=$n2;$n2++;}
 	}
 }
-close RESU;
+close $txt;
 my %check_prot;
 my $prot_file=$tmp_dir."/Custom_phages_mga_prots.fasta";
-open(PROT,">$prot_file") || die "pblm ouverture fichier $prot_file\n";
+open my $faa,">",$prot_file;
 my $n=0;
-foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
+foreach my $id (sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 	$n++;
-	my $id=$_;
 	my @tab_genes=sort {$order_gene{$id}{$a} <=> $order_gene{$id}{$b} } keys %{$predict{$id}};
 	## We check the first gene and modify it if needed
 	my $seq_c=$seq_base{$id};
-	foreach(@tab_genes){
-		my @tab=split("\t",$predict{$id}{$_});
+	foreach my $gene (@tab_genes){
+		my @tab=split("\t",$predict{$id}{$gene});
 		if ($tab[5]!=11){
 			# soit on est au début de séquence, soit en toute fin (théoriquement)
 			if ($tab[4]!=0){
@@ -138,10 +138,10 @@ foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 				}
 			}
 			my $new_line=join("\t",@tab);
-			$predict{$id}{$_}=$new_line;
+			$predict{$id}{$gene}=$new_line;
 		}
 
-		@tab=split("\t",$predict{$id}{$_});
+		@tab=split("\t",$predict{$id}{$gene});
 		my $name=$tab[0];
 		my $start=$tab[1];
 		my $stop=$tab[2];
@@ -160,7 +160,7 @@ foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 			$frag.=substr($seq_c,0,$stop);
 		}
 		## POUR RECUPERER LA SEQ PROT
-		my $seq_bio = Bio::Seq->new(id=>"dummyid",-seq =>$frag,-alphabet => 'dna' );
+		my $seq_bio = Bio::Seq->new (-id=>"dummyid",-seq =>$frag,-alphabet => 'dna', -verbose => -1 );
 		my @seqs = Bio::SeqUtils->translate_6frames($seq_bio);
 		my $cadre=0;
 		if ($sens eq "-"){$cadre=3;}
@@ -171,11 +171,13 @@ foreach(sort {$order_contig{$a} <=> $order_contig{$b} } keys %predict){
 			chop($prot_sequence);
 		}
 		my $id_out=$id."-".$name;
-		print PROT ">$id_out\n$prot_sequence\n";
+		print $id_out."\t".$start."\t".$stop."\t".$sens."\t".$frame."\n";
+		print $prot_sequence."\n";
+		print $faa ">$id_out\n$prot_sequence\n";
 		$check_prot{$id_out}=1;
 	}
 }
-close PROT;
+close $faa;
 # Clustering the proteins
 # - 1 - Hmmsearch vs the original db
 my $out_hmmsearch=$tmp_dir."New_prots_vs_Phagedb.tab";
