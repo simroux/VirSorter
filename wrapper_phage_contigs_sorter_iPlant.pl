@@ -7,33 +7,33 @@
 Required Arguments:
 
   -f|--fna       Fasta file of contigs
+  --data-dir     Path to "virsorter-data" directory (e.g. /path/to/virsorter-data)
 
-Options: 
+Options:
 
   -d|--dataset   Code dataset (DEFAULT "VIRSorter")
-  --cp           Custom phage sequence 
+  --cp           Custom phage sequence
   --db           Either "1" (DEFAULT Refseqdb) or "2" (Viromedb)
   --wdir         Working directory (DEFAULT $PWD/virsorter-out/)
                  Will be created if not existing.
   --ncpu         Number of CPUs (default: 4)
   --virome       Add this flag to enable virome decontamination mode, for datasets
-                 mostly viral to force the use of generic metrics instead of 
+                 mostly viral to force the use of generic metrics instead of
                  calculated from the whole dataset. (default: off)
-  --data-dir     Path to "virsorter-data" directory (e.g. /path/to/virsorter-data)
-  --diamond      Use diamond (in "--more-sensitive" mode) instead of blastp. 
-                 Diamond is much faster than blastp and may be useful for adding 
-		 many custom phages, or for processing extremely large Fasta files. 
-		 Unless you specify --diamond, VirSorter will use blastp.
-  --keep-db      Specifying this flag keeps the new HMM and BLAST databases created 
+  --diamond      Use diamond (in "--more-sensitive" mode) instead of blastp.
+                 Diamond is much faster than blastp and may be useful for adding
+		     many custom phages, or for processing extremely large Fasta files.
+		     Unless you specify --diamond, VirSorter will use blastp.
+  --keep-db      Specifying this flag keeps the new HMM and BLAST databases created
                  after adding custom phages. This is useful if you have custom phages
-		 that you want to be included in several different analyses and want 
-		 to save the database and point VirSorter to it in subsequent runs.
-                 By default, this is off, and you should only specify this flag if 
-		 you're SURE you need it.
+		     that you want to be included in several different analyses and want
+		     to save the database and point VirSorter to it in subsequent runs.
+                 By default, this is off, and you should only specify this flag if
+		     you're SURE you need it.
   --no_c         Use this option if you have issues with empty output files, i.e. 0
-		 viruses predicted by VirSorter. This make VirSorter use a perl function 
-		 instead of the C script to calculate enrichment statistics. Note that 
-		 VirSorter will be slower with this option.
+		     viruses predicted by VirSorter. This make VirSorter use a perl function
+		     instead of the C script to calculate enrichment statistics. Note that
+		     VirSorter will be slower with this option.
   --help         Show help and exit
 
 =head1 DESCRIPTION
@@ -117,7 +117,7 @@ say map { sprintf "%-15s: %s\n", @$_ } (
     ['blastp',        $blastp],
 );
 
- 
+
 if ($tag_virome == 1) {
     say "WARNING: THIS WILL BE A VIROME DECONTAMINATION RUN";
 }
@@ -183,11 +183,11 @@ my $out = "";
 ## SETTING UP THE WORKING DIRECTORY
 my $log_dir = catdir($wdir, 'logs');
 if (-d $log_dir) {
-## Commented on iPlant, but can be useful when running VirSorter on a directory already processed 
+## Commented on iPlant, but can be useful when running VirSorter on a directory already processed
 ## (to avoid recomputing the gene prediction and comparison to PFAM especially)
-#    $out = `rm -r $log_dir/* *.csv`; 
+#    $out = `rm -r $log_dir/* *.csv`;
 #    print "rm -r log* *.csv => $out\n";
-} 
+}
 else {
     mkpath($log_dir);
 }
@@ -226,9 +226,9 @@ if ( !-d $fastadir ) {
     # detect circular, predict genes on contigs and extract proteins, as well
     # as filtering on size (nb genes) and/or circular
     my $nb_gene_th = 2; # At least two complete genes on the contig
-    my $path_script_step_1 
+    my $path_script_step_1
         = catfile($script_dir,"Step_1_contigs_cleaning_and_gene_prediction.pl");
-    my $cmd_step_1 
+    my $cmd_step_1
         = "$path_script_step_1 $code_dataset $fastadir $fna_file $nb_gene_th "
         . ">> $log_out 2>> $log_err";
     say "Started at ".(localtime);
@@ -239,7 +239,7 @@ if ( !-d $fastadir ) {
 
 say "\t$out";
 
-my $fasta_contigs_nett 
+my $fasta_contigs_nett
     = catfile($fastadir, $code_dataset . "_nett_filtered.fasta");
 my $fasta_file_prots = catfile($fastadir, $code_dataset . "_prots.fasta");
 
@@ -268,7 +268,7 @@ if (!(-e $out_hmmsearch_pfama)) {
 
 my $out_hmmsearch_pfamb     = catfile($wdir, 'Contigs_prots_vs_PFAMb.tab');
 my $out_hmmsearch_pfamb_bis = catfile($wdir, 'Contigs_prots_vs_PFAMb.out');
-my $cmd_hmm_pfamb 
+my $cmd_hmm_pfamb
     = "$path_hmmsearch --tblout $out_hmmsearch_pfamb --cpu $n_cpus "
     . "-o $out_hmmsearch_pfamb_bis --noali $db_PFAM_b $fasta_file_prots "
     . ">> $log_out 2>> $log_err";
@@ -286,21 +286,21 @@ if (!(-e $out_hmmsearch_pfamb)) {
 # Files that will stay along the computations
 my $predict_file  = catfile($fastadir, $code_dataset . '_mga_final.predict' );
 my $out_hmmsearch = catfile($wdir, 'Contigs_prots_vs_Phage_Gene_Catalog.tab');
-my $out_hmmsearch_bis        
+my $out_hmmsearch_bis
     = catfile($wdir, 'Contigs_prots_vs_Phage_Gene_Catalog.out');
-my $out_blast_unclustered    
+my $out_blast_unclustered
     = catfile($wdir, 'Contigs_prots_vs_Phage_Gene_unclustered.tab');
-my $out_file_affi  
+my $out_file_affi
     = catfile($wdir, $code_dataset . '_affi-contigs.csv');
-my $out_file_phage_fragments 
+my $out_file_phage_fragments
     = catfile($wdir, $code_dataset . '_phage-signal.csv');
-my $global_out_file          
+my $global_out_file
     = catfile($wdir, $code_dataset . '_global-phage-signal.csv');
-my $new_prots_to_cluster     
+my $new_prots_to_cluster
     = catfile($wdir, $code_dataset . '_new_prot_list.csv');
 
 # Constant scripts
-my $script_merge_annot 
+my $script_merge_annot
     = catfile($script_dir,"Step_2_merge_contigs_annotation.pl");
 my $cmd_merge
     = "$script_merge_annot $predict_file $out_hmmsearch $out_blast_unclustered "
@@ -337,7 +337,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
 
         ## Clustering of the new prots with the unclustered
         my $script_new_cluster  = catfile($script_dir, "Step_0_make_new_clusters.pl");
-        
+
         # First revision, we just import the Refseq database
         if ( $r_n == 0 ) {
             #`mkdir $dir_revision/db`;
@@ -358,7 +358,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
 			        "$dir_revision/db $n_cpus diamond >> $log_out 2>> $log_err"
                     );
 		        }
-				    
+
                 say "Adding custom phage to the database : \n$add_first\n";
                 $out = `$add_first`;
                 ## Test that everything went all right, if not die there
@@ -369,8 +369,8 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
             }
             # should replace Pool_cluster / Pool_unclustered and
             # Pool_new_unclustered else , we just import the Refseq database
-            else { 
-                `cp $dir_Phage_genes/* $dir_revision/db/`; 
+            else {
+                `cp $dir_Phage_genes/* $dir_revision/db/`;
             }
         }
         else {
@@ -412,8 +412,8 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
 
             while (<$DB>) {
                 chomp($_);
-                if ( $_ =~ /^NAME/ ) { 
-                    $check++; 
+                if ( $_ =~ /^NAME/ ) {
+                    $check++;
                 }
             }
             close $DB;
@@ -458,7 +458,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
             "-query $fasta_file_prots",
             "-db $blastable_unclustered",
             "-out $out_blast_new_unclustered",
-            "-num_threads $n_cpus", 
+            "-num_threads $n_cpus",
             "-outfmt 6",
             "-evalue 0.001 >> $log_out 2>> $log_err"
         );
@@ -468,7 +468,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
                 "blastp --query $fasta_file_prots",
                 "--db $blastable_unclustered",
                 "--out $out_blast_new_unclustered",
-                "--threads $n_cpus", 
+                "--threads $n_cpus",
                 "--outfmt 6",
                 "-b 1", #Uses at most approx. b * 6 GB of RAM. -b 1 will use at most ~6 GB of RAM. ## Changed to -b 1 to avoid oom issues
                 "--more-sensitive",
@@ -491,7 +491,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
 		say "\tNo file $out_blast_new_unclustered, nothing new to add to $out_blast_unclustered\n";
 	}
 
-        # Make backup of the previous files to have 
+        # Make backup of the previous files to have
         # trace of the different steps
         my $backup_affi = catfile($dir_revision, 'affi_backup.csv');
         my $backup_phage_signal =
@@ -516,7 +516,7 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
     say "Started at ".(localtime);
     say "Step 2 : $cmd_merge";
     `echo $cmd_merge >> $log_out 2>> $log_err`;
-    $out = `$cmd_merge`; 
+    $out = `$cmd_merge`;
     ## This generate a csv table including the map of each contig, with PFAM
     #and Viral PCs annotations, as well as strand and length of genes
 
@@ -540,10 +540,10 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
 }
 
 # Last step -> extract all sequences as fasta files and gb
-my $script_generate_output 
+my $script_generate_output
     = catfile($script_dir, 'Step_5_get_phage_fasta-gb.pl');
 
-my $cmd_step_5 
+my $cmd_step_5
     = "$script_generate_output $code_dataset $wdir >> $log_out 2>> $log_err";
 
 say "\nStarted at ".(localtime);
@@ -623,7 +623,7 @@ say $s1 "--> Fasta file mined for viral sequences : $input_file";
 say $s1 "--> Viral database used : ";
 
 if ($choice_database == 2) {
-    say $s1 join(' ', 
+    say $s1 join(' ',
         "Viromes : all bacterial and archaeal virus genomes in Refseq,",
         "as of January 2014, plus non-redundant predicted genes from viral",
         "metagenomes (including seawater, freshwater, and human-related",
@@ -689,7 +689,6 @@ sub check_for_decontamination {
 	my %count;
 	$count{"viral"}=0;
 	$count{"total"}=0;
-	my %check;
 	my %store_len;
 	### Check all contigs 10kb+ and take the total cumulated length of these
 	open my $fa,"<",$in_fasta;
@@ -700,9 +699,9 @@ sub check_for_decontamination {
 		if ($_=~/^>(\S+)/){
 			my $tmp=$1;
 			if ($c_seq>=10000){
-				$check{$c_c}=1;
 				$count{"total"}+=$c_seq;
 				$store_len{$c_c}=$c_seq;
+                        # print "$c_c is $c_seq long\n";
 			}
 			$c_c=$tmp;
 			$c_seq=0;
@@ -712,16 +711,23 @@ sub check_for_decontamination {
 		}
 	}
 	close $fa;
-	if (length($c_seq)>=10000){
-		$check{$c_c}=1;
+	if ($c_seq>=10000){
 		$count{"total"}+=$c_seq;
 		$store_len{$c_c}=$c_seq;
+            # print "$c_c is $c_seq long\n";
 	}
 	if (-e $out_file_1 || -e $out_file_2 || -e $out_file_3){
 		open my $fa_2,"cat $out_file_1 $out_file_2 $out_file_3 |";
 		while(<$fa_2>){
 			chomp($_);
-			if ($_=~/^>(\S+)-cat_\d/){$count{"viral"}+=$store_len{$1};}
+			if ($_=~/^>(\S+)-cat_\d/){
+                              my $c_c=$1;
+                              # print "Checking length of $c_c => $store_len{$c_c}\n";
+                              if (defined($store_len{$c_c}) && ($store_len{$c_c}>=10000)){
+                                    $count{"viral"}+=$store_len{$c_c};
+                                    # print "$c_c is $store_len{$c_c} long and is viral\n";
+                              }
+                  }
 		}
 		close $fa_2;
 	}
@@ -729,20 +735,32 @@ sub check_for_decontamination {
 		open my $fa_3,"cat $out_file_p1 $out_file_p2 $out_file_p3 |";
 		while(<$fa_3>){
 			chomp($_);
-			if ($_=~/^>\S+-gene_\d+_gene_\d+-(\d+)-(\d+)-cat_\d/){$count{"viral"}+=($2-$1+1);}
+			if ($_=~/^>(\S+)_gene_\d+_gene_\d+-(\d+)-(\d+)-cat_\d/){
+                              my $c_c=$1;
+                              my $len=($3-$2+1);
+                              if ($len>=10000){
+                                    $count{"viral"}+=$len;
+                                    # print "Prophage from $2 to $3 ($len) is long and is viral\n";
+                              }
+                  }
 		}
 		close $fa_3;
 	}
-	
+
 	if ($count{"total"}==0){}
 	else{
 		print "## Verify if this should have been a virome decontamination mode based on 10kb+ contigs\n";
 		my $ratio=$count{"viral"}/$count{"total"};
+            # print "Viral: $count{viral}\n";
+            # print "Total: $count{total}\n";
 		if ($ratio>0.25){
 			print "#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!##!#!#!#!#!#!#!#!##!#!#!#!#!#!#!#!#\n";
-			print "More than 25% of the bp in contigs >= 10kb were predicted as viral (estimated ratio: ".sprintf("%.02f",$ratio*100)."%\n";
+			print "More than 25% of the bp in contigs >= 10kb were predicted as viral (estimated ratio: ".sprintf("%.02f",$ratio*100)."%)\n";
 			print "You may want to use the virome decontamination mode on this dataset, as it seems to have lot of viruses\n";
 			print "#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!#!##!#!#!#!#!#!#!#!##!#!#!#!#!#!#!#!#\n";
 		}
+            else{
+                  print "## -> No, this looks fine\n";
+            }
 	}
 }
