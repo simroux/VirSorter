@@ -45,7 +45,7 @@ my $gb_file_p1  = catfile( $dir_out, $code . '_prophages_cat-4.gb' );
 my $gb_file_p2  = catfile( $dir_out, $code . '_prophages_cat-5.gb' );
 my $gb_file_p3  = catfile( $dir_out, $code . '_prophages_cat-6.gb' );
 print join("\n", "The sequences will be put in:",
-    ( map { " - $_" } 
+    ( map { " - $_" }
         $out_file_1,
         $out_file_2,
         $out_file_3,
@@ -131,7 +131,7 @@ if (-e $last_affi){
 			$infos{$id_c}{$gene}{"order"}=$i;
 			$i++;
 			if ($tab[5] eq "-"){ ## no Phage Cluster affiliation
-				if ($tab[9] eq "-"){ ## no PFAM either, ok.. 
+				if ($tab[9] eq "-"){ ## no PFAM either, ok..
 					$infos{$id_c}{$gene}{"affi"}="hypothetical protein";
 				}
 				else{
@@ -261,8 +261,9 @@ if (-e $last_affi){
 							if ($start<0){$start=0;}
 							my $gene_stop=$2;
 							my $stop=$infos{$id_c}{$gene_stop}{"stop"}+$decal;
+							if ($stop>length($seq_c)){$stop=length($seq_c);}
 							my $length=$stop-$start;
-							$iscirc=0; # An integrated prophage cannot be circular, so set this to linear 
+							$iscirc=0; # An integrated prophage cannot be circular, so set this to linear
 							print "  from $1 to $2 .. from $start to $stop ($length)\n";
 							if ($start<$stop){ # Regular prophage
 								my $substr=substr($seq_c,$start,$length);
@@ -443,8 +444,9 @@ if (-e $last_affi){
 					if ($start<0){$start=0;}
 					my $gene_stop=$2;
 					my $stop=$infos{$id_c}{$gene_stop}{"stop"}+$decal;
+					if ($stop>length($seq_c)){$stop=length($seq_c);}
 					my $length=$stop-$start;
-                                        $iscirc=0; # An integrated prophage cannot be circular, so set this to linear 
+                                        $iscirc=0; # An integrated prophage cannot be circular, so set this to linear
 					print "  from $1 to $2 .. from $start to $stop ($length)\n";
 					if ($start<$stop){
 						my $display_id=$id_red."_".$gene_start."_".$gene_stop."-".$start."-".$stop."-cat_".$check{$id_c}{$_}{"category"};
