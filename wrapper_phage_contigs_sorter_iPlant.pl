@@ -229,7 +229,7 @@ if ( !-d $fastadir ) {
     my $path_script_step_1
         = catfile($script_dir,"Step_1_contigs_cleaning_and_gene_prediction.pl");
     my $cmd_step_1
-        = "$path_script_step_1 $code_dataset $fastadir $fna_file $nb_gene_th "
+        = "perl $path_script_step_1 $code_dataset $fastadir $fna_file $nb_gene_th "          ## "perl" added (IB)
         . ">> $log_out 2>> $log_err";
     say "Started at ".(localtime);
     say "Step 0.5 : $cmd_step_1";
@@ -303,21 +303,21 @@ my $new_prots_to_cluster
 my $script_merge_annot
     = catfile($script_dir,"Step_2_merge_contigs_annotation.pl");
 my $cmd_merge
-    = "$script_merge_annot $predict_file $out_hmmsearch $out_blast_unclustered "
+    = "perl $script_merge_annot $predict_file $out_hmmsearch $out_blast_unclustered "          ## "perl" added (IB)
     . "$out_hmmsearch_pfama $out_hmmsearch_pfamb $ref_phage_clusters "
     . "$out_file_affi >> $log_out 2>> $log_err";
 
 my $script_detect = catfile($script_dir, "Step_3_highlight_phage_signal.pl");
-my $cmd_detect = "$script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c ". ">> $log_out 2>> $log_err";
+my $cmd_detect = "perl $script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c ". ">> $log_out 2>> $log_err";     ## "perl" added (IB)
 my $ref_file = $out_file_affi;
 $ref_file =~ s/\.csv/.refs/g;
-my $cmd_detect_rd1 = "$script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c ". "-ref $ref_file >> $log_out 2>> $log_err"; ## for use after rd1
+my $cmd_detect_rd1 = "perl $script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c ". "-ref $ref_file >> $log_out 2>> $log_err"; ## for use after rd1  # "perl" added (IB)
 if ($tag_virome == 1) {
     $cmd_detect = "$script_detect -csv $out_file_affi -out $out_file_phage_fragments -n_cpu $n_cpus -no_c $no_c ". "-ref $generic_ref_file >> $log_out 2>> $log_err";
 }
 
 my $script_summary = catfile($script_dir, "Step_4_summarize_phage_signal.pl");
-my $cmd_summary = "$script_summary $out_file_affi $out_file_phage_fragments " . "$global_out_file $new_prots_to_cluster >> $log_out 2>> $log_err";
+my $cmd_summary = "perl $script_summary $out_file_affi $out_file_phage_fragments " . "$global_out_file $new_prots_to_cluster >> $log_out 2>> $log_err";      ## "perl" added (IB)
 
 # # Get the final result file ready
 `touch $global_out_file`;
@@ -349,12 +349,12 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
                     $script_dir, "Step_first_add_custom_phage_sequence.pl"
                 );
                 my $add_first = join(' ',
-                    "$script_custom_phage $custom_phage $dir_Phage_genes/",
+                    "perl $script_custom_phage $custom_phage $dir_Phage_genes/",       ## "perl" added (IB)
                     "$dir_revision/db $n_cpus >> $log_out 2>> $log_err"
                 );
                 if ($diamond == 1) {
                     $add_first = join(' ',
-		            "$script_custom_phage $custom_phage $dir_Phage_genes/",
+		            "perl $script_custom_phage $custom_phage $dir_Phage_genes/",           ## "perl" added (IB)
 			        "$dir_revision/db $n_cpus diamond >> $log_out 2>> $log_err"
                     );
 		        }
@@ -379,13 +379,13 @@ while ( (-e $new_prots_to_cluster || $r_n == -1) && ($r_n<=10) ) {
               catfile($wdir, 'r_'. $previous_r, 'db', 'Pool_unclustered.faa');
 
             my $cmd_new_clusters = join(' ',
-                "$script_new_cluster $dir_revision $fasta_file_prots",
+                "perl $script_new_cluster $dir_revision $fasta_file_prots",         ## "perl" added (IB)  Step_0_make_new_clusters.pl
                 "$previous_fasta_unclustered",
                 "$new_prots_to_cluster $n_cpus >> $log_out 2>> $log_err"
                 );
             if ($diamond == 1) {
 	    	$cmd_new_clusters = join(' ',
-	    	    "$script_new_cluster $dir_revision $fasta_file_prots",
+	    	    "perl $script_new_cluster $dir_revision $fasta_file_prots",      ## "perl" added (IB)  Step_0_make_new_clusters.pl
 	    	    "$previous_fasta_unclustered",
 	    	    "$new_prots_to_cluster $n_cpus diamond >> $log_out 2>> $log_err"
                     );
@@ -544,7 +544,7 @@ my $script_generate_output
     = catfile($script_dir, 'Step_5_get_phage_fasta-gb.pl');
 
 my $cmd_step_5
-    = "$script_generate_output $code_dataset $wdir >> $log_out 2>> $log_err";
+    = "perl $script_generate_output $code_dataset $wdir >> $log_out 2>> $log_err";      ## "perl" added (IB)
 
 say "\nStarted at ".(localtime);
 say "\nStep 5 : $cmd_step_5";
