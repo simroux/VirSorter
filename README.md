@@ -2,6 +2,8 @@
 
 Source code of the VirSorter App, available on CyVerse (https://de.iplantcollaborative.org/de/)
 
+### NOTE - VirSorter 2 is now available for early access/testing -> see https://github.com/jiarong/VirSorter2 ###
+
 # Publication
 
 * VirSorter: mining viral signal from microbial genomic data
